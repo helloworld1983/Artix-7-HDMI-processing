@@ -140,41 +140,18 @@ architecture Behavioral of hdmi_design is
         out_vsync     : in  std_logic;
         out_red       : in  std_logic_vector(7 downto 0);
         out_green     : in  std_logic_vector(7 downto 0);
-        out_blue      : in  std_logic_vector(7 downto 0);
-        -----------------------------------
-        -- For symbol dump or retransmit
-        -----------------------------------
-        symbol_sync  : out std_logic; -- indicates a fixed reference point in the frame.
-        symbol_ch0   : out std_logic_vector(9 downto 0);
-        symbol_ch1   : out std_logic_vector(9 downto 0);
-        symbol_ch2   : out std_logic_vector(9 downto 0)
+        out_blue      : in  std_logic_vector(7 downto 0)
     );
     end component;
-    signal symbol_sync  : std_logic;
-    signal symbol_ch0   : std_logic_vector(9 downto 0);
-    signal symbol_ch1   : std_logic_vector(9 downto 0);
-    signal symbol_ch2   : std_logic_vector(9 downto 0);
 
-    signal pixel_clk : std_logic;
-    signal in_blank  : std_logic;
-    signal in_hsync  : std_logic;
-    signal in_vsync  : std_logic;
-    signal in_red    : std_logic_vector(7 downto 0);
-    signal in_green  : std_logic_vector(7 downto 0);
-    signal in_blue   : std_logic_vector(7 downto 0);
-    signal is_interlaced   : std_logic;
-    signal is_second_field : std_logic;
-    signal out_blank : std_logic;
-    signal out_hsync : std_logic;
-    signal out_vsync : std_logic;
-    signal out_red   : std_logic_vector(7 downto 0);
-    signal out_green : std_logic_vector(7 downto 0);
-    signal out_blue  : std_logic_vector(7 downto 0);
+    signal blank  : std_logic;
+    signal hsync  : std_logic;
+    signal vsync  : std_logic;
+    signal red    : std_logic_vector(7 downto 0);
+    signal green  : std_logic_vector(7 downto 0);
+    signal blue   : std_logic_vector(7 downto 0);
 
-    signal debug : std_logic_vector(7 downto 0);
 begin
-    debug_pmod <= debug;
-    led        <= debug;
 
 i_hdmi_io: hdmi_io port map (
         clk100        => clk100,
@@ -183,7 +160,7 @@ i_hdmi_io: hdmi_io port map (
         ---------------------
         clock_locked     => open,
         data_synced      => open,
-        debug            => debug,
+        debug            => open,
         ---------------------
         -- HDMI input signals
         ---------------------
@@ -210,40 +187,28 @@ i_hdmi_io: hdmi_io port map (
         hdmi_tx_n     => hdmi_tx_n,
 
 
-        pixel_clk => pixel_clk,
+        pixel_clk => open,
         -------------------------------
         -- VGA data recovered from HDMI
         -------------------------------
-        in_blank        => in_blank,
-        in_hsync        => in_hsync,
-        in_vsync        => in_vsync,
-        in_red          => in_red,
-        in_green        => in_green,
-        in_blue         => in_blue,
-        is_interlaced   => is_interlaced,
-        is_second_field => is_second_field,
+        in_blank        => blank,
+        in_hsync        => hsync,
+        in_vsync        => vsync,
+        in_red          => red,
+        in_green        => green,
+        in_blue         => blue,
+        is_interlaced   => open,
+        is_second_field => open,
 
         -----------------------------------
         -- VGA data to be converted to HDMI
         -----------------------------------
-        out_blank => out_blank,
-        out_hsync => out_hsync,
-        out_vsync => out_vsync,
-        out_red   => out_red,
-        out_green => out_green,
-        out_blue  => out_blue,
-
-        symbol_sync  => symbol_sync,
-        symbol_ch0   => symbol_ch0,
-        symbol_ch1   => symbol_ch1,
-        symbol_ch2   => symbol_ch2
+        out_blank => blank,
+        out_hsync => hsync,
+        out_vsync => vsync,
+        out_red   => red,
+        out_green => green,
+        out_blue  => blue
     );
-
-out_blank <= in_blank;
-out_hsync <= in_hsync;
-out_vsync <= in_vsync;
-out_red   <= in_red;
-out_green <= in_green;
-out_blue  <= in_blue;
 
 end Behavioral;

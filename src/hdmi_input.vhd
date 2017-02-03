@@ -1,25 +1,25 @@
 ----------------------------------------------------------------------------------
 -- Engineer: Mike Field <hamster@snap.net.nz>
--- 
+--
 -- Module Name: hdmi_input - Behavioral
 --
--- Description: Decode the video data out of an incoming HDMI data stream. 
--- 
+-- Description: Decode the video data out of an incoming HDMI data stream.
+--
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -55,23 +55,23 @@ entity hdmi_input is
     Port (
         system_clk      : in  std_logic;
 
-        debug           : out std_logic_vector(5 downto 0);        
+        debug           : out std_logic_vector(5 downto 0);
         hdmi_detected   : out std_logic;
-    
+
         pixel_clk       : out std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : out std_logic;  -- Driven by BUFFIO
         pixel_io_clk_x5 : out std_logic;  -- Driven by BUFFIO
-    
+
         -- HDMI input signals
         hdmi_in_clk   : in    std_logic;
         hdmi_in_ch0   : in    std_logic;
         hdmi_in_ch1   : in    std_logic;
         hdmi_in_ch2   : in    std_logic;
-    
+
         -- Status
         pll_locked   : out std_logic;
         symbol_sync  : out std_logic;
-    
+
         -- Raw data signals
         raw_blank : out std_logic;
         raw_hsync : out std_logic;
@@ -86,12 +86,8 @@ entity hdmi_input is
         adp_subpacket0_bits : out std_logic_vector(1 downto 0);
         adp_subpacket1_bits : out std_logic_vector(1 downto 0);
         adp_subpacket2_bits : out std_logic_vector(1 downto 0);
-        adp_subpacket3_bits : out std_logic_vector(1 downto 0);
-        -- For later reuse
-        symbol_ch0   : out std_logic_vector(9 downto 0);
-        symbol_ch1   : out std_logic_vector(9 downto 0);
-        symbol_ch2   : out std_logic_vector(9 downto 0)
-        
+        adp_subpacket3_bits : out std_logic_vector(1 downto 0)
+
     );
 end hdmi_input;
 
@@ -117,9 +113,9 @@ architecture Behavioral of hdmi_input is
            data            : out std_logic_vector (7 downto 0);
            symbol_sync     : out STD_LOGIC);
     end component;
-    
+
     signal clk_pixel_raw     : std_logic;
-    
+
     component alignment_detect is
         Port ( clk            : in STD_LOGIC;
                invalid_symbol : in STD_LOGIC;
@@ -128,7 +124,7 @@ architecture Behavioral of hdmi_input is
                bitslip        : out STD_LOGIC;
                symbol_sync    : out STD_LOGIC);
     end component;
-    
+
     signal clk_pixel         : std_logic;
     signal clk_pixel_x1      : std_logic;
     signal clk_pixel_x5      : std_logic;
@@ -148,7 +144,7 @@ architecture Behavioral of hdmi_input is
     signal ch0_symbol  : std_logic_vector(9 downto 0);
     signal ch1_symbol  : std_logic_vector(9 downto 0);
     signal ch2_symbol  : std_logic_vector(9 downto 0);
-    
+
     -------------------------------------------------------------
     -- For the decoded TMDS data
     -------------------------------------------------------------
@@ -173,7 +169,7 @@ architecture Behavioral of hdmi_input is
     signal ch0_terc4_1           : std_logic_vector (3 downto 0);
     signal ch0_data_valid_1      : std_logic;
     signal ch0_data_1            : std_logic_vector(7 downto 0);
-    
+
     signal ch1_invalid_symbol  : std_logic;
     signal ch1_ctl_valid       : std_logic;
     signal ch1_ctl             : std_logic_vector(1 downto 0);
@@ -195,7 +191,7 @@ architecture Behavioral of hdmi_input is
     signal ch1_terc4_1           : std_logic_vector (3 downto 0);
     signal ch1_data_valid_1      : std_logic;
     signal ch1_data_1            : std_logic_vector(7 downto 0);
-    
+
     signal ch2_invalid_symbol  : std_logic;
     signal ch2_ctl_valid       : std_logic;
     signal ch2_ctl             : std_logic_vector(1 downto 0);
@@ -217,8 +213,8 @@ architecture Behavioral of hdmi_input is
     signal ch2_terc4_1           : std_logic_vector (3 downto 0);
     signal ch2_data_valid_1      : std_logic;
     signal ch2_data_1            : std_logic_vector(7 downto 0);
-    
-    
+
+
     signal reset_counter  : unsigned(7 downto 0) := (others => '1');
 
     signal vdp_prefix_detect    : std_logic_vector(7 downto 0) := (others => '0');
@@ -227,24 +223,20 @@ architecture Behavioral of hdmi_input is
     signal in_vdp               : std_logic := '0';
 
     signal adp_prefix_detect    : std_logic_vector(7 downto 0) := (others => '0');
-    signal adp_guardband_detect : std_logic := '0'; 
+    signal adp_guardband_detect : std_logic := '0';
     signal adp_prefix_seen      : std_logic := '0';
     signal in_adp               : std_logic := '0';
     signal dvid_mode            : std_logic := '0';
     signal last_was_ctl         : std_logic := '0';
-    
+
     signal in_dvid              : std_logic := '0';
     signal symbol_sync_i        : std_logic := '0';
 begin
     pll_locked  <= locked;
     symbol_sync <= symbol_sync_i;
-    reset       <= std_logic(reset_counter(reset_counter'high));    
-    symbol_ch0  <= ch0_symbol;
-    symbol_ch1  <= ch1_symbol;
-    symbol_ch2  <= ch2_symbol;
+    reset       <= std_logic(reset_counter(reset_counter'high));
 
-    
-    debug       <= ch2_invalid_symbol & ch1_invalid_symbol & ch0_invalid_symbol & dvid_mode & locked & symbol_sync_i;         
+    debug       <= ch2_invalid_symbol & ch1_invalid_symbol & ch0_invalid_symbol & dvid_mode & locked & symbol_sync_i;
 
     --------------------------------------------
     -- a 200MHz clock for the IDELAY reference
@@ -318,9 +310,9 @@ i_BUFG: BUFG PORT MAP (
    ------------------------------
    -- Input Delay reference
    --
-   -- These are tied to the delay instances  
+   -- These are tied to the delay instances
    -- by the IODELAY_GROUP attribute.
-   --------------------------------------------    
+   --------------------------------------------
 IDELAYCTRL_inst : IDELAYCTRL
     port map (
         RDY    => open,    -- 1-bit output: Ready output
@@ -394,10 +386,10 @@ hdmi_MMCME2_BASE_inst : MMCME2_BASE
    );
 
    ----------------------------------
-   -- Force the highest speed clock 
+   -- Force the highest speed clock
    -- through the IO clock buffer
    -- (this is only rated for 600MHz!)
-   -----------------------------------  
+   -----------------------------------
 BUFIO_x5_inst : BUFIO
    port map (
       I => clk_pixel_x5_raw, -- 1-bit input: Clock input (connect to an IBUF or BUFMR).
@@ -419,7 +411,7 @@ BUFIO_inst : BUFG
       pixel_io_clk_x1 <= clk_pixel_x1;
       pixel_io_clk_x5 <= clk_pixel_x5;
 
-ch0: input_channel Port map ( 
+ch0: input_channel Port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -439,7 +431,7 @@ ch0: input_channel Port map (
         reset           => ser_reset,
         symbol_sync     => ch0_symbol_sync);
 
-ch1: input_channel Port map ( 
+ch1: input_channel Port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -459,7 +451,7 @@ ch1: input_channel Port map (
         reset           => ser_reset,
         symbol_sync     => ch1_symbol_sync);
 
-ch2: input_channel Port map ( 
+ch2: input_channel Port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -480,7 +472,7 @@ ch2: input_channel Port map (
         symbol_sync     => ch2_symbol_sync);
 
     symbol_sync_i <= ch0_symbol_sync and ch1_symbol_sync and ch2_symbol_sync;
-    
+
     hdmi_detected <= not dvid_mode;
 hdmi_section_decode: process(clk_pixel)
     begin
@@ -490,7 +482,7 @@ hdmi_section_decode: process(clk_pixel)
             -------------------------------------------------------------------
             if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch2_ctl_valid = '1' then
                 -------------------------------------------------------------------
-                -- As soon as we see avalid CTL symbols we are no longer in the   
+                -- As soon as we see avalid CTL symbols we are no longer in the
                 -- video or aux data period it doesn't have any trailing guard band
                 -------------------------------------------------------------------
                 in_vdp    <= '0';
@@ -498,7 +490,7 @@ hdmi_section_decode: process(clk_pixel)
                 in_dvid   <= '0';
                 raw_vsync <= ch0_ctl(1);
                 raw_hsync <= ch0_ctl(0);
-                raw_blank <= '1';            
+                raw_blank <= '1';
                 raw_ch2   <= (others => '0');
                 raw_ch1   <= (others => '0');
                 raw_ch0   <= (others => '0');
@@ -510,7 +502,7 @@ hdmi_section_decode: process(clk_pixel)
                 if in_vdp = '1' then
                     raw_vsync <= '0';
                     raw_hsync <= '0';
-                    raw_blank <= '0';            
+                    raw_blank <= '0';
                     raw_ch2   <= ch2_data;
                     raw_ch1   <= ch1_data;
                     raw_ch0   <= ch0_data;
@@ -519,12 +511,12 @@ hdmi_section_decode: process(clk_pixel)
                         raw_ch1   <= x"16";
                         raw_ch0   <= x"16";
                     end if;
-            
+
                 elsif in_dvid = '1' then
                     -- In the Video data period
                     raw_vsync <= '0';
                     raw_hsync <= '0';
-                    raw_blank <= '0';            
+                    raw_blank <= '0';
                     raw_ch2   <= ch2_data;
                     raw_ch1   <= ch1_data;
                     raw_ch0   <= ch0_data;
@@ -532,7 +524,7 @@ hdmi_section_decode: process(clk_pixel)
                     -- In the Aux Data Period Period
                     raw_vsync <= ch0_terc4(1);
                     raw_hsync <= ch0_terc4(0);
-                    raw_blank <= '1';            
+                    raw_blank <= '1';
                     raw_ch0   <= (others => '0');
                     raw_ch1   <= (others => '0');
                     raw_ch2   <= (others => '0');
@@ -546,7 +538,7 @@ hdmi_section_decode: process(clk_pixel)
                     adp_subpacket3_bits <= ch2_terc4(3) & ch1_terc4(3);
                 end if;
             end if;
-               
+
             ------------------------------------------------------------
             -- We need to detect 8 ADP or VDP prefix characters in a row
             ------------------------------------------------------------
@@ -560,7 +552,7 @@ hdmi_section_decode: process(clk_pixel)
                     end if;
                 end if;
             end if;
-                
+
             ---------------------------------------------
             -- See if we can detect the ADP guardband
             --
@@ -596,7 +588,7 @@ hdmi_section_decode: process(clk_pixel)
             -- See if we can detect the VDP guardband
             -- This is pretty nices as the guard
             -----------------------------------------
-            vdp_guardband_detect <= '0';                        
+            vdp_guardband_detect <= '0';
             if ch0_guardband_valid = '1' and ch1_guardband_valid = '1' and ch2_guardband_valid = '1' then
                 -- TERC Coded for the VDP guard band.
                 if ch0_guardband = "1" and ch1_guardband = "0" and ch2_guardband = "1" then
@@ -612,10 +604,10 @@ hdmi_section_decode: process(clk_pixel)
                 in_dvid <= '1';
             end if;
             -------------------------------------------------------------
-            -- Is this an un-announced video data? If so we receiving 
-            -- DVI-D data, and not HDMI 
+            -- Is this an un-announced video data? If so we receiving
+            -- DVI-D data, and not HDMI
             -------------------------------------------------------------
-            if ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1' 
+            if ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1'
                 and last_was_ctl = '1' and vdp_prefix_seen = '0' and adp_prefix_seen = '0' then
                dvid_mode <= '1';
             end if;
@@ -643,7 +635,7 @@ hdmi_section_decode: process(clk_pixel)
             ch2_data_1           <= ch2_data;
         end if;
     end process;
-    
+
 ------------------------------------------
 -- Reset the receivers if PLL lock is lost
 ------------------------------------------
@@ -664,7 +656,7 @@ reset_proc2: process(clk_pixel)
     begin
         if rising_edge(clk_pixel) then
             ser_reset <= reset_counter(reset_counter'high);
-            ser_ce    <= not ser_reset; 
+            ser_ce    <= not ser_reset;
         end if;
     end process;
 end Behavioral;

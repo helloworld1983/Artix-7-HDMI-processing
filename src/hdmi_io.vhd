@@ -106,15 +106,7 @@ entity hdmi_io is
         out_vsync : in  std_logic;
         out_red   : in  std_logic_vector(7 downto 0);
         out_green : in  std_logic_vector(7 downto 0);
-        out_blue  : in  std_logic_vector(7 downto 0);
-
-        -----------------------------------
-        -- For symbol dump or retransmit
-        -----------------------------------
-        symbol_sync  : out std_logic; -- indicates a fixed reference point in the frame.
-        symbol_ch0   : out std_logic_vector(9 downto 0);
-        symbol_ch1   : out std_logic_vector(9 downto 0);
-        symbol_ch2   : out std_logic_vector(9 downto 0)
+        out_blue  : in  std_logic_vector(7 downto 0)
     );
 end entity;
 
@@ -161,11 +153,7 @@ architecture Behavioral of hdmi_io is
         adp_subpacket0_bits : out std_logic_vector(1 downto 0);
         adp_subpacket1_bits : out std_logic_vector(1 downto 0);
         adp_subpacket2_bits : out std_logic_vector(1 downto 0);
-        adp_subpacket3_bits : out std_logic_vector(1 downto 0);
-        -- For later reuse
-        symbol_ch0   : out std_logic_vector(9 downto 0);
-        symbol_ch1   : out std_logic_vector(9 downto 0);
-        symbol_ch2   : out std_logic_vector(9 downto 0)
+        adp_subpacket3_bits : out std_logic_vector(1 downto 0)
 
     );
     end component;
@@ -323,7 +311,6 @@ architecture Behavioral of hdmi_io is
     signal tmds_out_ch1 : std_logic;
     signal tmds_out_ch2 : std_logic;
 
-    signal detect_sr : std_logic_vector(7 downto 0) := (others => '0');
 begin
     pixel_clk <= pixel_clk_i;
     hdmi_rx_hpa  <= '1';
@@ -387,11 +374,7 @@ i_hdmi_input : hdmi_input port map (
         adp_subpacket0_bits => adp_subpacket0_bits,
         adp_subpacket1_bits => adp_subpacket1_bits,
         adp_subpacket2_bits => adp_subpacket2_bits,
-        adp_subpacket3_bits => adp_subpacket3_bits,
-        -- For later reuse
-        symbol_ch0 => symbol_ch0,
-        symbol_ch1 => symbol_ch1,
-        symbol_ch2 => symbol_ch2
+        adp_subpacket3_bits => adp_subpacket3_bits
     );
 
     -------------------------------------
@@ -528,18 +511,5 @@ out_tx1_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
 
 out_tx2_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
     port map ( O  => hdmi_tx_p(2), OB => hdmi_tx_n(2), I  => tmds_out_ch2);
-
-    -- Detect when VSYNC is held high for 8 cycles, so we can synchronise the capture of symbols
-process(pixel_clk_i)
-    begin
-        if rising_edge(pixel_clk_i) then
-            if detect_sr = "11111111" and raw_vsync = '0' then
-                symbol_sync <= '1';
-            else
-                symbol_sync <= '0';
-            end if;
-            detect_sr <= detect_sr(6 downto 0) & raw_vsync;
-        end if;
-    end process;
 
 end Behavioral;
