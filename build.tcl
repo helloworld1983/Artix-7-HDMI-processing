@@ -18,7 +18,6 @@ add_files {src/input_channel.vhd}
 add_files {src/line_delay.vhd}
 add_files {src/pixel_processing.vhd}
 add_files {src/serialiser_10_to_1.vhd}
-add_files {src/symbol_dump.vhd}
 add_files {src/tmds_decoder.vhd}
 add_files {src/tmds_encoder.vhd}
 
