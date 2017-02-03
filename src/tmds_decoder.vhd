@@ -1,28 +1,28 @@
 ----------------------------------------------------------------------------------
--- Engineer: Mike Field <hamster@snap.net.nz> 
--- 
+-- Engineer: Mike Field <hamster@snap.net.nz>
+--
 -- Create Date: 10.07.2015 20:06:49
--- Design Name: 
+-- Design Name:
 -- Module Name: TMDS_decoder - Behavioral
 --
 -- Description: Decoding for TMDS encoded symbols. This performs the conversion
 --              using a table lookup for simplicity
--- 
+--
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -38,7 +38,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -55,7 +55,7 @@ entity TMDS_decoder is
     Port ( clk              : in  std_logic;
            symbol           : in  std_logic_vector (9 downto 0);
            invalid_symbol   : out std_logic;
-           
+
            ctl_valid        : out std_logic;
            ctl              : out std_logic_vector (1 downto 0);
 
@@ -79,23 +79,23 @@ decode_ctl:  process(clk)
             ------------------
             -- TMDS data bytes
             if lookup(8) = '1' then
-                data_valid <= '1'; 
+                data_valid <= '1';
                 data       <= lookup(7 downto 0);
             else
                 data_valid <= '0';
             end if;
-                        
+
             ------------
             -- CTL codes
             if lookup(8 downto 7) = "01" then
                 ctl_valid <= '1';
                 ctl       <= lookup(1 downto 0);
-            else 
+            else
                 ctl_valid <= '0';
             end if;
 
             ------------------------------
-            -- All other codes are invalid 
+            -- All other codes are invalid
             ------------------------------
             if lookup(8 downto 7) = "00" then
                 invalid_symbol <= '1';
@@ -109,7 +109,7 @@ decode_ctl:  process(clk)
                 -------------------------
                 -- Decode the guard bands
                 -------------------------
-                case lookup(7 downto 0) is 
+                case lookup(7 downto 0) is
                     when x"55"  => guardband_valid <= '1'; guardband <= "0";
                     when x"AB"  => guardband_valid <= '1'; guardband <= "1";
                     when others => null;
@@ -118,7 +118,7 @@ decode_ctl:  process(clk)
                 -------------------------
                 -- Decode TERC4 data
                 -------------------------
-                case lookup(7 downto 0) is 
+                case lookup(7 downto 0) is
                     when x"5B"  => terc4_valid <= '1'; terc4 <= "0000";-- "1010011100" TERC4 0000
                     when x"5A"  => terc4_valid <= '1'; terc4 <= "0001"; -- "1001100011" TERC4 0001
                     when x"D3"  => terc4_valid <= '1'; terc4 <= "0010"; -- "1011100100" TERC4 0010
@@ -127,10 +127,9 @@ decode_ctl:  process(clk)
                     when x"22"  => terc4_valid <= '1'; terc4 <= "0101"; -- "0100011110" TERC4 0101
                     when x"92"  => terc4_valid <= '1'; terc4 <= "0110"; -- "0110001110" TERC4 0110
                     when x"44"  => terc4_valid <= '1'; terc4 <= "0111"; -- "0100111100" TERC4 0111
-                    when x"AB"  => terc4_valid <= '1'; terc4 <= "1000"; -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2) 
+                    when x"AB"  => terc4_valid <= '1'; terc4 <= "1000"; -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2)
                     when x"4B"  => terc4_valid <= '1'; terc4 <= "1001"; -- "0100111001" TERC4 1001
                     when x"A4"  => terc4_valid <= '1'; terc4 <= "1010"; -- "0110011100" TERC4 1010
-                    when x"B5"  => terc4_valid <= '1'; terc4 <= "1011"; -- "1011000110" TERC4 1011
                     when x"B5"  => terc4_valid <= '1'; terc4 <= "1011"; -- "1011000110" TERC4 1011
                     when x"6D"  => terc4_valid <= '1'; terc4 <= "1100"; -- "1010001110" TERC4 1100
                     when x"6C"  => terc4_valid <= '1'; terc4 <= "1101"; -- "1001110001" TERC4 1101
@@ -143,27 +142,27 @@ decode_ctl:  process(clk)
             -------------------------------------------------------------
             -- Convert the incoming signal to something we can decode
             --
-            -- For data symbols 
+            -- For data symbols
             -- ----------------
             -- bit 8    - 1 -- Data word flage
             -- bits 7:0 - xxxxxxxx - Data value
             --
             -- For CTL symbols
-            -- --------------- 
+            -- ---------------
             -- bit 8    - 0 - Data word flage
             -- bit 7    - 1 - CTL Indicator
             -- bits 6:2 - X - Ignored
             -- bits 1:0 - xx - CTL value
             --
             -- For Invalid symbols
-            -- ------------------- 
+            -- -------------------
             -- bit 8    - 0 - Data word flage
             -- bit 7    - 0 - TERC4 Inicated
             -- bit 6    - 0 - CTL Indicator
             -- bit 5    - 0 - Guard band indicator
-            -- bits 4:0 - X - Unused 
+            -- bits 4:0 - X - Unused
             --
-            ------------------------------------------------------------- 
+            -------------------------------------------------------------
             case symbol is
                 -- DVI-D Data sybmols
                 -- Data 00
@@ -645,7 +644,7 @@ decode_ctl:  process(clk)
                 -- Data aa
                 when "1000110011" => lookup <= "110101010";
                 -- Data ab
-                when "1011001100" => lookup <= "110101011"; -- TERC4 1000 & HDMI Guard band (video C0 and Video C2) 
+                when "1011001100" => lookup <= "110101011"; -- TERC4 1000 & HDMI Guard band (video C0 and Video C2)
                 -- Data ac
                 when "0011001110" => lookup <= "110101100";
                 when "1000110001" => lookup <= "110101100";
@@ -882,21 +881,21 @@ decode_ctl:  process(clk)
                 -- Data ff
                 when "0011111111" => lookup <= "111111111";
                 when "1000000000" => lookup <= "111111111";
-                
-                -- DVI-D CTL symbols        
+
+                -- DVI-D CTL symbols
                 when "0010101011" => lookup <= "01" & "00000" &  "01";  -- CTL1
                 when "0101010100" => lookup <= "01" & "00000" &  "10";  -- CTL2
                 when "1010101011" => lookup <= "01" & "00000" &  "11";  -- CTL3
                 when "1101010100" => lookup <= "01" & "00000" &  "00";  -- CTL0
-                
+
                 -- Invalid symbols
-                when others       => lookup <= "0000" & "00000"; 
+                when others       => lookup <= "0000" & "00000";
             end case;
         end if;
     end process;
 end Behavioral;
 
--- For Guard band and TERC4 decoding (to be done later!) 
+-- For Guard band and TERC4 decoding (to be done later!)
 -- when x"55" => -- "0100110011" HDMI Guard band (video C1, data C1 & C2)
 -- when x"5B" => -- "1010011100" TERC4 0000
 -- when x"5A" => -- "1001100011" TERC4 0001
@@ -906,7 +905,7 @@ end Behavioral;
 -- when x"22" => -- "0100011110" TERC4 0101
 -- when x"92" => -- "0110001110" TERC4 0110
 -- when x"44" => -- "0100111100" TERC4 0111
--- when x"AB" => -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2) 
+-- when x"AB" => -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2)
 -- when x"4B" => -- "0100111001" TERC4 1001
 -- when x"A4" => -- "0110011100" TERC4 1010
 -- when x"B5" => -- "1011000110" TERC4 1011
