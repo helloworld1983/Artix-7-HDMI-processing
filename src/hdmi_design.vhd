@@ -132,13 +132,6 @@ architecture Behavioral of hdmi_design is
         is_interlaced   : out std_logic;
         is_second_field : out std_logic;
 
-        -------------------------------------
-        -- Audio Levels
-        -------------------------------------
-        audio_channel : out std_logic_vector(2 downto 0);
-        audio_de      : out std_logic;
-        audio_sample  : out std_logic_vector(23 downto 0);
-
         -----------------------------------
         -- VGA data to be converted to HDMI
         -----------------------------------
@@ -185,14 +178,7 @@ architecture Behavioral of hdmi_design is
             out_vsync : out std_logic;
             out_red   : out std_logic_vector(7 downto 0);
             out_green : out std_logic_vector(7 downto 0);
-            out_blue  : out std_logic_vector(7 downto 0);
-
-            -------------------------------------
-            -- Audio samples for metering
-            -------------------------------------
-            audio_channel : in std_logic_vector(2 downto 0);
-            audio_de      : in std_logic;
-            audio_sample  : in std_logic_vector(23 downto 0)
+            out_blue  : out std_logic_vector(7 downto 0)
     );
     end component;
 
@@ -222,10 +208,6 @@ architecture Behavioral of hdmi_design is
     signal out_red   : std_logic_vector(7 downto 0);
     signal out_green : std_logic_vector(7 downto 0);
     signal out_blue  : std_logic_vector(7 downto 0);
-
-    signal audio_channel : std_logic_vector(2 downto 0);
-    signal audio_de      : std_logic;
-    signal audio_sample  : std_logic_vector(23 downto 0);
 
     signal debug : std_logic_vector(7 downto 0);
 begin
@@ -280,13 +262,6 @@ i_hdmi_io: hdmi_io port map (
         is_second_field => is_second_field,
 
         -----------------------------------
-        -- For symbol dump or retransmit
-        -----------------------------------
-        audio_channel => audio_channel,
-        audio_de      => audio_de,
-        audio_sample  => audio_sample,
-
-        -----------------------------------
         -- VGA data to be converted to HDMI
         -----------------------------------
         out_blank => out_blank,
@@ -316,9 +291,6 @@ i_processing: pixel_processing Port map (
         in_blue         => in_blue,
         is_interlaced   => is_interlaced,
         is_second_field => is_second_field,
-        audio_channel   => audio_channel,
-        audio_de        => audio_de,
-        audio_sample    => audio_sample,
         -------------------
         -- Processed pixels
         -------------------
