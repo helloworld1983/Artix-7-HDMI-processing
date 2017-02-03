@@ -3,17 +3,13 @@ add_files {src/conversion_to_RGB.vhd}
 add_files {src/deserialiser_1_to_10.vhd}
 add_files {src/detect_interlace.vhd}
 add_files {src/dvid_output.vhd}
-add_files {src/edge_enhance.vhd}
 add_files {src/edid_rom.vhd}
 add_files {src/expand_422_to_444.vhd}
 add_files {src/extract_video_infopacket_data.vhd}
-add_files {src/guidelines.vhd}
 add_files {src/hdmi_design.vhd}
 add_files {src/hdmi_input.vhd}
 add_files {src/hdmi_io.vhd}
 add_files {src/input_channel.vhd}
-add_files {src/line_delay.vhd}
-add_files {src/pixel_processing.vhd}
 add_files {src/serialiser_10_to_1.vhd}
 add_files {src/tmds_decoder.vhd}
 add_files {src/tmds_encoder.vhd}

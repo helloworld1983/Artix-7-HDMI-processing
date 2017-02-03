@@ -155,44 +155,6 @@ architecture Behavioral of hdmi_design is
     signal symbol_ch1   : std_logic_vector(9 downto 0);
     signal symbol_ch2   : std_logic_vector(9 downto 0);
 
-    component pixel_processing is
-        Port ( clk : in STD_LOGIC;
-            switches  : in std_logic_vector(7 downto 0);
-            ------------------
-            -- Incoming pixels
-            ------------------
-            in_blank  : in std_logic;
-            in_hsync  : in std_logic;
-            in_vsync  : in std_logic;
-            in_red    : in std_logic_vector(7 downto 0);
-            in_green  : in std_logic_vector(7 downto 0);
-            in_blue   : in std_logic_vector(7 downto 0);
-            is_interlaced   : in  std_logic;
-            is_second_field : in  std_logic;
-
-            -------------------
-            -- Processed pixels
-            -------------------
-            out_blank : out std_logic;
-            out_hsync : out std_logic;
-            out_vsync : out std_logic;
-            out_red   : out std_logic_vector(7 downto 0);
-            out_green : out std_logic_vector(7 downto 0);
-            out_blue  : out std_logic_vector(7 downto 0)
-    );
-    end component;
-
-    component symbol_dump is
-        port (
-            clk          : in std_logic;
-            clk100       : in std_logic;
-            symbol_sync  : in std_logic; -- indicates a fixed reference point in the frame.
-            symbol_ch0   : in std_logic_vector(9 downto 0);
-            symbol_ch1   : in std_logic_vector(9 downto 0);
-            symbol_ch2   : in std_logic_vector(9 downto 0);
-            rs232_tx     : out std_logic);
-    end component;
-
     signal pixel_clk : std_logic;
     signal in_blank  : std_logic;
     signal in_hsync  : std_logic;
@@ -277,29 +239,11 @@ i_hdmi_io: hdmi_io port map (
         symbol_ch2   => symbol_ch2
     );
 
-i_processing: pixel_processing Port map (
-        clk => pixel_clk,
-        switches => sw,
-        ------------------
-        -- Incoming pixels
-        ------------------
-        in_blank        => in_blank,
-        in_hsync        => in_hsync,
-        in_vsync        => in_vsync,
-        in_red          => in_red,
-        in_green        => in_green,
-        in_blue         => in_blue,
-        is_interlaced   => is_interlaced,
-        is_second_field => is_second_field,
-        -------------------
-        -- Processed pixels
-        -------------------
-        out_blank => out_blank,
-        out_hsync => out_hsync,
-        out_vsync => out_vsync,
-        out_red   => out_red,
-        out_green => out_green,
-        out_blue  => out_blue
-    );
+out_blank <= in_blank;
+out_hsync <= in_hsync;
+out_vsync <= in_vsync;
+out_red   <= in_red;
+out_green <= in_green;
+out_blue  <= in_blue;
 
 end Behavioral;
