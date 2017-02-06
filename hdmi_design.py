@@ -132,6 +132,10 @@ class HDMILoopback(Module):
         green = Signal(8)
         blue  = Signal(8)
 
+        pixel_clk = Signal()
+        pixel_io_clk_x1 = Signal()
+        pixel_io_clk_x5 = Signal()
+
         self.specials += [
             Instance("hdmi_io",
                 i_clk100=ClockSignal(),
@@ -145,30 +149,41 @@ class HDMILoopback(Module):
                 i_hdmi_rx_clk=hdmi_in_clk,
                 i_hdmi_rx=Cat(hdmi_in_data0, hdmi_in_data1, hdmi_in_data2),
 
-                io_hdmi_tx_cec=hdmi_out_pads.cec,
-                o_hdmi_tx_clk=hdmi_out_clk,
-                i_hdmi_tx_hpd=hdmi_out_pads.hdp,
-                io_hdmi_tx_rscl=hdmi_out_pads.scl,
-                io_hdmi_tx_rsda=hdmi_out_pads.sda,
-                o_hdmi_tx=Cat(hdmi_out_data0, hdmi_out_data1, hdmi_out_data2),
 
-                #o_pixel_clk=,
+                o_pixel_clk=pixel_clk,
+                o_pixel_io_clk_x1=pixel_io_clk_x1,
+                o_pixel_io_clk_x5=pixel_io_clk_x5,
 
                 o_in_blank=blank,
                 o_in_hsync=hsync,
                 o_in_vsync=vsync,
                 o_in_red=red,
                 o_in_green=green,
-                o_in_blue=blue,
-
-                i_out_blank=blank,
-                i_out_hsync=hsync,
-                i_out_vsync=vsync,
-                i_out_red=red,
-                i_out_green=green,
-                i_out_blue=blue
+                o_in_blue=blue
             )
         ]
+
+        self.specials += [
+            Instance("DVID_output",
+                i_pixel_clk=pixel_clk,
+                i_pixel_io_clk_x1=pixel_io_clk_x1,
+                i_pixel_io_clk_x5=pixel_io_clk_x5,
+
+                i_data_valid=1,
+                i_vga_blank=blank,
+                i_vga_hsync=hsync,
+                i_vga_vsync=vsync,
+                i_vga_red=red,
+                i_vga_blue=blue,
+                i_vga_green=green,
+
+                o_tmds_out_clk=hdmi_out_clk,
+                o_tmds_out_ch0=hdmi_out_data0,
+                o_tmds_out_ch1=hdmi_out_data1,
+                o_tmds_out_ch2=hdmi_out_data2
+            )
+        ]
+        self.comb += hdmi_out_pads.scl.eq(1)
 
         platform.add_source_dir("./input_src/")
         platform.add_source_dir("./output_src/")

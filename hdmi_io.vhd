@@ -65,17 +65,10 @@ entity hdmi_io is
         hdmi_rx_clk   : in    std_logic;
         hdmi_rx       : in    std_logic_vector(2 downto 0);
 
-        -------------
-        -- HDMI out
-        -------------
-        hdmi_tx_cec   : inout std_logic;
-        hdmi_tx_clk   : out   std_logic;
-        hdmi_tx_hpd   : in    std_logic;
-        hdmi_tx_rscl  : inout std_logic;
-        hdmi_tx_rsda  : inout std_logic;
-        hdmi_tx       : out   std_logic_vector(2 downto 0);
-
         pixel_clk : out std_logic;
+        pixel_io_clk_x1 : out std_logic;
+        pixel_io_clk_x5 : out std_logic;
+
         -------------------------------
         -- VGA data recovered from HDMI
         -------------------------------
@@ -84,17 +77,7 @@ entity hdmi_io is
         in_vsync  : out std_logic;
         in_red    : out std_logic_vector(7 downto 0);
         in_green  : out std_logic_vector(7 downto 0);
-        in_blue   : out std_logic_vector(7 downto 0);
-
-        -----------------------------------
-        -- VGA data to be converted to HDMI
-        -----------------------------------
-        out_blank : in  std_logic;
-        out_hsync : in  std_logic;
-        out_vsync : in  std_logic;
-        out_red   : in  std_logic_vector(7 downto 0);
-        out_green : in  std_logic_vector(7 downto 0);
-        out_blue  : in  std_logic_vector(7 downto 0)
+        in_blue   : out std_logic_vector(7 downto 0)
     );
 end entity;
 
@@ -107,14 +90,8 @@ architecture Behavioral of hdmi_io is
     signal raw_ch1   : std_logic_vector(7 downto 0);  -- G or Y
     signal raw_ch0   : std_logic_vector(7 downto 0);  -- R or Cr
 
-    -- Clocks for the pixel clock domain
-    signal pixel_clk_i     : std_logic;
-    signal pixel_io_clk_x1 : std_logic;
-    signal pixel_io_clk_x5 : std_logic;
-
 begin
 
-    pixel_clk <= pixel_clk_i;
     hdmi_rx_hpa  <= '1';
     hdmi_rx_txen <= '1';
     hdmi_rx_cec  <= 'Z';
@@ -129,7 +106,7 @@ i_hdmi_input : entity work.hdmi_input port map (
         clk100          => clk100,
         clk200          => clk200,
         -- Pixel and serializer clocks
-        pixel_clk       => pixel_clk_i,
+        pixel_clk       => pixel_clk,
         pixel_io_clk_x1 => pixel_io_clk_x1,
         pixel_io_clk_x5 => pixel_io_clk_x5,
         --- HDMI input signals
@@ -158,36 +135,5 @@ i_hdmi_input : entity work.hdmi_input port map (
     in_blue  <= raw_ch2;
     in_green <= raw_ch1;
     in_red   <= raw_ch0;
-
-------------------------------------------------
--- Outputting video data
------------------------------------------------
-i_DVID_output: entity work.DVID_output port map (
-        pixel_clk       => pixel_clk_i,
-        pixel_io_clk_x1 => pixel_io_clk_x1,
-        pixel_io_clk_x5 => pixel_io_clk_x5,
-
-        data_valid      => '1',
-        -- VGA Signals
-        vga_blank     => out_blank,
-        vga_hsync     => out_hsync,
-        vga_vsync     => out_vsync,
-        vga_red       => out_red,
-        vga_blue      => out_blue,
-        vga_green     => out_green,
-
-        --- HDMI out
-        tmds_out_clk  => hdmi_tx_clk,
-        tmds_out_ch0  => hdmi_tx(0),
-        tmds_out_ch1  => hdmi_tx(1),
-        tmds_out_ch2  => hdmi_tx(2)
-    );
-
-    -----------------------------
-    -- Other HDMI control signals
-    -----------------------------
-    hdmi_tx_rsda  <= 'Z';
-    hdmi_tx_cec   <= 'Z';
-    hdmi_tx_rscl  <= '1';
 
 end Behavioral;
