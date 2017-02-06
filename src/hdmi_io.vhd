@@ -259,8 +259,6 @@ i_conversion_to_RGB: entity work.conversion_to_RGB
     port map (
            clk              => pixel_clk_i,
            ------------------------
-           input_is_YCbCr   => input_is_YCbCr,
-           input_is_sRGB    => input_is_sRGB,
            in_blank         => fourfourfour_blank,
            in_hsync         => fourfourfour_hsync,
            in_vsync         => fourfourfour_vsync,
