@@ -52,6 +52,7 @@ use UNISIM.VComponents.all;
 entity hdmi_io is
     port (
         clk100        : in STD_LOGIC;
+        clk200        : in std_logic;
 
         -------------------------------
         --HDMI input signals
@@ -125,7 +126,8 @@ i_edid_rom: entity work.edid_rom  port map (
              edid_debug => open);
 
 i_hdmi_input : entity work.hdmi_input port map (
-        system_clk      => clk100,
+        clk100          => clk100,
+        clk200          => clk200,
         -- Pixel and serializer clocks
         pixel_clk       => pixel_clk_i,
         pixel_io_clk_x1 => pixel_io_clk_x1,

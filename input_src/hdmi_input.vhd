@@ -53,7 +53,8 @@ use UNISIM.VComponents.all;
 
 entity hdmi_input is
     Port (
-        system_clk      : in  std_logic;
+        clk100      : in  std_logic;
+        clk200      : in  std_logic;
 
         pixel_clk       : out std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : out std_logic;  -- Driven by BUFFIO
@@ -88,9 +89,6 @@ architecture Behavioral of hdmi_input is
     signal clk_pixel_x5      : std_logic;
     signal clk_pixel_x1_raw  : std_logic;
     signal clk_pixel_x5_raw  : std_logic;
-    signal clk_200_raw       : std_logic;
-    signal clk_200           : std_logic;
-    signal clkfb_1           : std_logic;
     signal clkfb_2           : std_logic;
     signal locked            : std_logic;
     signal reset             : std_logic;
@@ -156,60 +154,6 @@ architecture Behavioral of hdmi_input is
 begin
     pll_locked  <= locked;
     reset       <= std_logic(reset_counter(reset_counter'high));
-
-    --------------------------------------------
-    -- a 200MHz clock for the IDELAY reference
-    --------------------------------------------
-clk_MMCME2_BASE_inst : MMCME2_BASE
-   generic map (
-      BANDWIDTH => "OPTIMIZED",      -- Jitter programming (OPTIMIZED, HIGH, LOW)
-      DIVCLK_DIVIDE   => 1,          -- Master division value (1-106)
-      CLKFBOUT_MULT_F => 8.0,        -- Multiply value for all CLKOUT (2.000-64.000).
-      CLKFBOUT_PHASE => 0.0,         -- Phase offset in degrees of CLKFB (-360.000-360.000).
-      CLKIN1_PERIOD => 10.0, -- Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
-      -- CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
-      CLKOUT0_DIVIDE_F => 4.0,       -- Divide amount for CLKOUT0 (1.000-128.000).
-      -- CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
-      CLKOUT0_DUTY_CYCLE => 0.5,
-      -- CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
-      CLKOUT0_PHASE => 0.0,
-      REF_JITTER1 => 0.0,        -- Reference input jitter in UI (0.000-0.999).
-      STARTUP_WAIT => FALSE      -- Delays DONE until MMCM is locked (FALSE, TRUE)
-   )
-   port map (
-      -- Clock Outputs: 1-bit (each) output: User configurable clock outputs
-      CLKOUT0   => clk_200_raw,  -- 1-bit output: CLKOUT0
-      -- Feedback Clocks: 1-bit (each) output: Clock feedback ports
-      CLKFBOUT  => clkfb_1,      -- 1-bit output: Feedback clock
-      CLKFBOUTB => open,         -- 1-bit output: Inverted CLKFBOUT
-      -- Status Ports: 1-bit (each) output: MMCM status ports
-      LOCKED    => open,         -- 1-bit output: LOCK
-      -- Clock Inputs: 1-bit (each) input: Clock input
-      CLKIN1    => system_clk,   -- 1-bit input: Clock
-      -- Control Ports: 1-bit (each) input: MMCM control ports
-      PWRDWN    => '0',          -- 1-bit input: Power-down
-      RST       => '0',          -- 1-bit input: Reset
-      -- Feedback Clocks: 1-bit (each) input: Clock feedback ports
-      CLKFBIN   => clkfb_1       -- 1-bit input: Feedback clock
-   );
-
-i_BUFG: BUFG
-    port map (
-        I => clk_200_raw,
-        O => clk_200
-    );
-   ------------------------------
-   -- Input Delay reference
-   --
-   -- These are tied to the delay instances
-   -- by the IODELAY_GROUP attribute.
-   --------------------------------------------
-IDELAYCTRL_inst : IDELAYCTRL
-    port map (
-        RDY    => open,    -- 1-bit output: Ready output
-        REFCLK => clk_200, -- 1-bit input:  Reference clock input
-        RST    => '0'      -- 1-bit input:  Active high reset input
-    );
 
    --------------------------------
    -- MMCM driven by the HDMI clock
@@ -283,7 +227,7 @@ BUFIO_inst : BUFG
 
 ch0: entity work.input_channel
     port map (
-        clk_mgmt        => system_clk,
+        clk_mgmt        => clk100,
         clk             => clk_pixel,
         ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
@@ -305,7 +249,7 @@ ch0: entity work.input_channel
 
 ch1: entity work.input_channel
     port map (
-        clk_mgmt        => system_clk,
+        clk_mgmt        => clk100,
         clk             => clk_pixel,
         ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
@@ -327,7 +271,7 @@ ch1: entity work.input_channel
 
 ch2: entity work.input_channel
     port map (
-        clk_mgmt        => system_clk,
+        clk_mgmt        => clk100,
         clk             => clk_pixel,
         ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
@@ -393,9 +337,9 @@ hdmi_section_decode: process(clk_pixel)
 ------------------------------------------
 -- Reset the receivers if PLL lock is lost
 ------------------------------------------
-reset_proc: process(system_clk)
+reset_proc: process(clk100)
     begin
-        if rising_edge(system_clk) then
+        if rising_edge(clk100) then
             if locked = '1' then
                 if reset_counter > 0 then
                     reset_counter <= reset_counter-1;

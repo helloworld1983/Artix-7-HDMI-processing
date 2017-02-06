@@ -45,15 +45,15 @@ class _CRG(Module):
             AsyncResetSynchronizer(self.cd_clk200, ~pll_locked | rst),
         ]
 
-        #reset_counter = Signal(4, reset=15)
-        #ic_reset = Signal(reset=1)
-        #self.sync.clk200 += \
-        #    If(reset_counter != 0,
-        #        reset_counter.eq(reset_counter - 1)
-        #    ).Else(
-        #        ic_reset.eq(0)
-        #    )
-        #self.specials += Instance("IDELAYCTRL", i_REFCLK=ClockSignal("clk200"), i_RST=ic_reset)
+        reset_counter = Signal(4, reset=15)
+        ic_reset = Signal(reset=1)
+        self.sync.clk200 += \
+            If(reset_counter != 0,
+                reset_counter.eq(reset_counter - 1)
+            ).Else(
+                ic_reset.eq(0)
+            )
+        self.specials += Instance("IDELAYCTRL", i_REFCLK=ClockSignal("clk200"), i_RST=ic_reset)
 
 
 class HDMILoopback(Module):
@@ -135,6 +135,7 @@ class HDMILoopback(Module):
         self.specials += [
             Instance("hdmi_io",
                 i_clk100=ClockSignal(),
+                i_clk200=ClockSignal("clk200"),
 
                 io_hdmi_rx_cec=hdmi_in_pads.cec,
                 o_hdmi_rx_hpa=hdmi_in_pads.hpa,
@@ -142,18 +143,14 @@ class HDMILoopback(Module):
                 io_hdmi_rx_sda=hdmi_in_pads.sda,
                 o_hdmi_rx_txen=hdmi_in_pads.txen,
                 i_hdmi_rx_clk=hdmi_in_clk,
-                i_hdmi_rx=Cat(hdmi_in_data0,
-                              hdmi_in_data1,
-                              hdmi_in_data2),
+                i_hdmi_rx=Cat(hdmi_in_data0, hdmi_in_data1, hdmi_in_data2),
 
                 io_hdmi_tx_cec=hdmi_out_pads.cec,
                 o_hdmi_tx_clk=hdmi_out_clk,
                 i_hdmi_tx_hpd=hdmi_out_pads.hdp,
                 io_hdmi_tx_rscl=hdmi_out_pads.scl,
                 io_hdmi_tx_rsda=hdmi_out_pads.sda,
-                o_hdmi_tx=Cat(hdmi_out_data0,
-                              hdmi_out_data1,
-                              hdmi_out_data2),
+                o_hdmi_tx=Cat(hdmi_out_data0, hdmi_out_data1, hdmi_out_data2),
 
                 #o_pixel_clk=,
 
