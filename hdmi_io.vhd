@@ -163,9 +163,9 @@ i_hdmi_input : entity work.hdmi_input port map (
         pixel_io_clk_x5 => pixel_io_clk_x5,
         --- HDMI input signals
         hdmi_in_clk   => tmds_in_clk,
-        hdmi_in_ch0   => tmds_in_ch0,
-        hdmi_in_ch1   => tmds_in_ch1,
-        hdmi_in_ch2   => tmds_in_ch2,
+        hdmi_in_ch0   => tmds_in_ch2, -- FIXME
+        hdmi_in_ch1   => tmds_in_ch1, -- FIXME
+        hdmi_in_ch2   => tmds_in_ch0, -- FIXME
         -- are the HDMI symbols in sync?
         symbol_sync   => open,
         pll_locked    => open,
