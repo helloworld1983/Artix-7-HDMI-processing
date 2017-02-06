@@ -54,7 +54,6 @@ use UNISIM.VComponents.all;
 entity hdmi_input is
     Port (
         system_clk      : in  std_logic;
-        hdmi_detected   : out std_logic;
 
         pixel_clk       : out std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : out std_logic;  -- Driven by BUFFIO
@@ -206,12 +205,6 @@ architecture Behavioral of hdmi_input is
 
     signal reset_counter  : unsigned(7 downto 0) := (others => '1');
 
-    signal vdp_prefix_detect    : std_logic_vector(7 downto 0) := (others => '0');
-    signal vdp_guardband_detect : std_logic := '0';
-    signal vdp_prefix_seen      : std_logic := '0';
-    signal in_vdp               : std_logic := '0';
-
-    signal dvid_mode            : std_logic := '0';
     signal last_was_ctl         : std_logic := '0';
 
     signal in_dvid              : std_logic := '0';
@@ -456,7 +449,6 @@ ch2: input_channel Port map (
 
     symbol_sync_i <= ch0_symbol_sync and ch1_symbol_sync and ch2_symbol_sync;
 
-    hdmi_detected <= not dvid_mode;
 hdmi_section_decode: process(clk_pixel)
     begin
         if rising_edge(clk_pixel) then
@@ -468,7 +460,6 @@ hdmi_section_decode: process(clk_pixel)
                 -- As soon as we see avalid CTL symbols we are no longer in the
                 -- video or aux data period it doesn't have any trailing guard band
                 -------------------------------------------------------------------
-                in_vdp    <= '0';
                 in_dvid   <= '0';
                 raw_vsync <= ch0_ctl(1);
                 raw_hsync <= ch0_ctl(0);
@@ -479,20 +470,7 @@ hdmi_section_decode: process(clk_pixel)
                 last_was_ctl   <= '1';
             else
                 last_was_ctl <= '0';
-                if in_vdp = '1' then
-                    raw_vsync <= '0';
-                    raw_hsync <= '0';
-                    raw_blank <= '0';
-                    raw_ch2   <= ch2_data;
-                    raw_ch1   <= ch1_data;
-                    raw_ch0   <= ch0_data;
-                    if ch2_invalid_symbol = '1' or ch2_invalid_symbol = '1' or ch2_invalid_symbol = '1' then
-                        raw_ch2   <= x"EF";
-                        raw_ch1   <= x"16";
-                        raw_ch0   <= x"16";
-                    end if;
-
-                elsif in_dvid = '1' then
+                if in_dvid = '1' then
                     -- In the Video data period
                     raw_vsync <= '0';
                     raw_hsync <= '0';
@@ -502,47 +480,11 @@ hdmi_section_decode: process(clk_pixel)
                     raw_ch0   <= ch0_data;
                 end if;
             end if;
-
-            ------------------------------------------------------------
-            -- We need to detect 8 ADP or VDP prefix characters in a row
-            ------------------------------------------------------------
-            vdp_prefix_detect <= vdp_prefix_detect(6 downto 0) & '0';
-            vdp_prefix_seen <= '0';
-            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch1_ctl_valid = '1' then
-                if ch1_ctl = "01" and ch2_ctl = "00" then
-                    vdp_prefix_detect(0) <=  '1';
-                    if vdp_prefix_detect = "01111111" then
-                        vdp_prefix_seen <= '1';
-                    end if;
-                end if;
-            end if;
-
-            -----------------------------------------
-            -- See if we can detect the VDP guardband
-            -- This is pretty nices as the guard
-            -----------------------------------------
-            vdp_guardband_detect <= '0';
-            if ch0_guardband_valid = '1' and ch1_guardband_valid = '1' and ch2_guardband_valid = '1' then
-                -- TERC Coded for the VDP guard band.
-                if ch0_guardband = "1" and ch1_guardband = "0" and ch2_guardband = "1" then
-                   vdp_guardband_detect <= vdp_prefix_seen;
-                   in_vdp <= vdp_guardband_detect AND (not in_vdp);
-                   dvid_mode <= '0';
-                end if;
-            end if;
             --------------------------------
             -- Is this some DVID video data?
             --------------------------------
-            if dvid_mode = '1' and last_was_ctl = '1' and ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1' then
+            if last_was_ctl = '1' and ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1' then
                 in_dvid <= '1';
-            end if;
-            -------------------------------------------------------------
-            -- Is this an un-announced video data? If so we receiving
-            -- DVI-D data, and not HDMI
-            -------------------------------------------------------------
-            if ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1'
-                and last_was_ctl = '1' and vdp_prefix_seen = '0' then
-               dvid_mode <= '1';
             end if;
 
             ch0_invalid_symbol_1 <= ch0_invalid_symbol;

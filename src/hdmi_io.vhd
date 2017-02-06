@@ -170,7 +170,6 @@ i_hdmi_input : entity work.hdmi_input port map (
         symbol_sync   => open,
         pll_locked    => open,
         -- VGA internal Signals
-        hdmi_detected => open,
         raw_blank     => raw_blank,
         raw_hsync     => raw_hsync,
         raw_vsync     => raw_vsync,
