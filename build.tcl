@@ -1,16 +1,20 @@
-add_files {src/alignment_detect.vhd}
-add_files {src/deserialiser_1_to_10.vhd}
-add_files {src/dvid_output.vhd}
-add_files {src/edid_rom.vhd}
-add_files {src/hdmi_design.vhd}
-add_files {src/hdmi_input.vhd}
-add_files {src/hdmi_io.vhd}
-add_files {src/input_channel.vhd}
-add_files {src/serialiser_10_to_1.vhd}
-add_files {src/tmds_decoder.vhd}
-add_files {src/tmds_encoder.vhd}
+add_files {input_src/alignment_detect.vhd}
+add_files {input_src/deserialiser_1_to_10.vhd}
+add_files {input_src/input_channel.vhd}
+add_files {input_src/edid_rom.vhd}
+add_files {input_src/tmds_decoder.vhd}
+add_files {input_src/hdmi_input.vhd}
 
-read_xdc constraints/NexysVideo.xdc
+add_files {output_src/serialiser_10_to_1.vhd}
+add_files {output_src/tmds_encoder.vhd}
+add_files {output_src/dvid_output.vhd}
+
+add_files {hdmi_io.vhd}
+add_files {hdmi_design.vhd}
+
+
+read_xdc hdmi_design.xdc
+
 synth_design -top hdmi_design -part xc7a200tfbg484-1 -include_dirs {}
 report_utilization -hierarchical -file top_utilization_hierarchical_synth.rpt
 report_utilization -file top_utilization_synth.rpt
