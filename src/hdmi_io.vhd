@@ -227,7 +227,6 @@ i_hdmi_input : entity work.hdmi_input port map (
     -------------------------------------
 i_expand_422_to_444: entity work.expand_422_to_444 Port map (
         clk          => pixel_clk_i,
-        input_is_422 => input_is_422,
         ------------------
         -- Incoming raw data
         ------------------
