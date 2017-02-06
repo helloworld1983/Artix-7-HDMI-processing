@@ -81,37 +81,7 @@ end hdmi_input;
 
 architecture Behavioral of hdmi_input is
 
-    component input_channel is
-    Port ( clk_mgmt        : in STD_LOGIC;
-           clk             : in  STD_LOGIC;
-           clk_x1          : in  STD_LOGIC;
-           clk_x5          : in  STD_LOGIC;
-           serial          : in  STD_LOGIC;
-           reset           : in  STD_LOGIC;
-           ce              : in  STD_LOGIC;
-           invalid_symbol  : out std_logic;
-           symbol          : out std_logic_vector (9 downto 0);
-           ctl_valid       : out std_logic;
-           ctl             : out std_logic_vector (1 downto 0);
-           terc4_valid     : out std_logic;
-           terc4           : out std_logic_vector (3 downto 0);
-           guardband_valid : out std_logic;
-           guardband       : out std_logic_vector (0 downto 0);
-           data_valid      : out std_logic;
-           data            : out std_logic_vector (7 downto 0);
-           symbol_sync     : out STD_LOGIC);
-    end component;
-
     signal clk_pixel_raw     : std_logic;
-
-    component alignment_detect is
-        Port ( clk            : in STD_LOGIC;
-               invalid_symbol : in STD_LOGIC;
-               delay_count    : out STD_LOGIC_VECTOR(4 downto 0);
-               delay_ce       : out STD_LOGIC;
-               bitslip        : out STD_LOGIC;
-               symbol_sync    : out STD_LOGIC);
-    end component;
 
     signal clk_pixel         : std_logic;
     signal clk_pixel_x1      : std_logic;
@@ -150,14 +120,6 @@ architecture Behavioral of hdmi_input is
     signal ch0_bitslip         : STD_LOGIC;
     signal ch0_symbol_sync     : STD_LOGIC;
 
-    signal ch0_invalid_symbol_1  : std_logic;
-    signal ch0_ctl_valid_1       : std_logic;
-    signal ch0_ctl_1             : std_logic_vector(1 downto 0);
-    signal ch0_terc4_valid_1     : std_logic;
-    signal ch0_terc4_1           : std_logic_vector (3 downto 0);
-    signal ch0_data_valid_1      : std_logic;
-    signal ch0_data_1            : std_logic_vector(7 downto 0);
-
     signal ch1_invalid_symbol  : std_logic;
     signal ch1_ctl_valid       : std_logic;
     signal ch1_ctl             : std_logic_vector(1 downto 0);
@@ -171,14 +133,6 @@ architecture Behavioral of hdmi_input is
     signal ch1_delay_ce        : STD_LOGIC;
     signal ch1_bitslip         : STD_LOGIC;
     signal ch1_symbol_sync     : STD_LOGIC;
-
-    signal ch1_invalid_symbol_1  : std_logic;
-    signal ch1_ctl_valid_1       : std_logic;
-    signal ch1_ctl_1             : std_logic_vector(1 downto 0);
-    signal ch1_terc4_valid_1     : std_logic;
-    signal ch1_terc4_1           : std_logic_vector (3 downto 0);
-    signal ch1_data_valid_1      : std_logic;
-    signal ch1_data_1            : std_logic_vector(7 downto 0);
 
     signal ch2_invalid_symbol  : std_logic;
     signal ch2_ctl_valid       : std_logic;
@@ -194,24 +148,13 @@ architecture Behavioral of hdmi_input is
     signal ch2_bitslip         : STD_LOGIC;
     signal ch2_symbol_sync     : STD_LOGIC;
 
-    signal ch2_invalid_symbol_1  : std_logic;
-    signal ch2_ctl_valid_1       : std_logic;
-    signal ch2_ctl_1             : std_logic_vector(1 downto 0);
-    signal ch2_terc4_valid_1     : std_logic;
-    signal ch2_terc4_1           : std_logic_vector (3 downto 0);
-    signal ch2_data_valid_1      : std_logic;
-    signal ch2_data_1            : std_logic_vector(7 downto 0);
-
-
     signal reset_counter  : unsigned(7 downto 0) := (others => '1');
 
     signal last_was_ctl         : std_logic := '0';
 
     signal in_dvid              : std_logic := '0';
-    signal symbol_sync_i        : std_logic := '0';
 begin
     pll_locked  <= locked;
-    symbol_sync <= symbol_sync_i;
     reset       <= std_logic(reset_counter(reset_counter'high));
 
     --------------------------------------------
@@ -226,45 +169,16 @@ clk_MMCME2_BASE_inst : MMCME2_BASE
       CLKIN1_PERIOD => 10.0, -- Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
       -- CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
       CLKOUT0_DIVIDE_F => 4.0,       -- Divide amount for CLKOUT0 (1.000-128.000).
-      CLKOUT1_DIVIDE   => 1,
-      CLKOUT2_DIVIDE   => 1,
-      CLKOUT3_DIVIDE   => 1,
-      CLKOUT4_DIVIDE   => 1,
-      CLKOUT5_DIVIDE   => 1,
-      CLKOUT6_DIVIDE   => 1,
       -- CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
       CLKOUT0_DUTY_CYCLE => 0.5,
-      CLKOUT1_DUTY_CYCLE => 0.5,
-      CLKOUT2_DUTY_CYCLE => 0.5,
-      CLKOUT3_DUTY_CYCLE => 0.5,
-      CLKOUT4_DUTY_CYCLE => 0.5,
-      CLKOUT5_DUTY_CYCLE => 0.5,
-      CLKOUT6_DUTY_CYCLE => 0.5,
       -- CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
       CLKOUT0_PHASE => 0.0,
-      CLKOUT1_PHASE => 0.0,
-      CLKOUT2_PHASE => 0.0,
-      CLKOUT3_PHASE => 0.0,
-      CLKOUT4_PHASE => 0.0,
-      CLKOUT5_PHASE => 0.0,
-      CLKOUT6_PHASE => 0.0,
-      CLKOUT4_CASCADE => FALSE,  -- Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
       REF_JITTER1 => 0.0,        -- Reference input jitter in UI (0.000-0.999).
       STARTUP_WAIT => FALSE      -- Delays DONE until MMCM is locked (FALSE, TRUE)
    )
    port map (
       -- Clock Outputs: 1-bit (each) output: User configurable clock outputs
       CLKOUT0   => clk_200_raw,  -- 1-bit output: CLKOUT0
-      CLKOUT0B  => open,         -- 1-bit output: Inverted CLKOUT0
-      CLKOUT1   => open,         -- 1-bit output: CLKOUT1
-      CLKOUT1B  => open,         -- 1-bit output: Inverted CLKOUT1
-      CLKOUT2   => open,         -- 1-bit output: CLKOUT2
-      CLKOUT2B  => open,         -- 1-bit output: Inverted CLKOUT2
-      CLKOUT3   => open,         -- 1-bit output: CLKOUT3
-      CLKOUT3B  => open,         -- 1-bit output: Inverted CLKOUT3
-      CLKOUT4   => open,         -- 1-bit output: CLKOUT4
-      CLKOUT5   => open,         -- 1-bit output: CLKOUT5
-      CLKOUT6   => open,         -- 1-bit output: CLKOUT6
       -- Feedback Clocks: 1-bit (each) output: Clock feedback ports
       CLKFBOUT  => clkfb_1,      -- 1-bit output: Feedback clock
       CLKFBOUTB => open,         -- 1-bit output: Inverted CLKFBOUT
@@ -279,7 +193,8 @@ clk_MMCME2_BASE_inst : MMCME2_BASE
       CLKFBIN   => clkfb_1       -- 1-bit input: Feedback clock
    );
 
-i_BUFG: BUFG PORT MAP (
+i_BUFG: BUFG
+    port map (
         I => clk_200_raw,
         O => clk_200
     );
@@ -310,43 +225,22 @@ hdmi_MMCME2_BASE_inst : MMCME2_BASE
       CLKOUT0_DIVIDE_F => 5.0,       -- Divide amount for CLKOUT0 (1.000-128.000).
       CLKOUT1_DIVIDE   => 5,
       CLKOUT2_DIVIDE   => 1,
-      CLKOUT3_DIVIDE   => 1,
-      CLKOUT4_DIVIDE   => 1,
-      CLKOUT5_DIVIDE   => 1,
-      CLKOUT6_DIVIDE   => 1,
       -- CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
       CLKOUT0_DUTY_CYCLE => 0.5,
       CLKOUT1_DUTY_CYCLE => 0.5,
       CLKOUT2_DUTY_CYCLE => 0.5,
-      CLKOUT3_DUTY_CYCLE => 0.5,
-      CLKOUT4_DUTY_CYCLE => 0.5,
-      CLKOUT5_DUTY_CYCLE => 0.5,
-      CLKOUT6_DUTY_CYCLE => 0.5,
       -- CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
       CLKOUT0_PHASE => 0.0,
       CLKOUT1_PHASE => 0.0,
       CLKOUT2_PHASE => 0.0,
-      CLKOUT3_PHASE => 0.0,
-      CLKOUT4_PHASE => 0.0,
-      CLKOUT5_PHASE => 0.0,
-      CLKOUT6_PHASE => 0.0,
-      CLKOUT4_CASCADE => FALSE,  -- Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
       REF_JITTER1 => 0.0,        -- Reference input jitter in UI (0.000-0.999).
       STARTUP_WAIT => FALSE      -- Delays DONE until MMCM is locked (FALSE, TRUE)
    )
    port map (
       -- Clock Outputs: 1-bit (each) output: User configurable clock outputs
       CLKOUT0   => clk_pixel_raw,    -- 1-bit output: CLKOUT0
-      CLKOUT0B  => open,         -- 1-bit output: Inverted CLKOUT0
       CLKOUT1   => clk_pixel_x1_raw, -- 1-bit output: CLKOUT1
-      CLKOUT1B  => open,         -- 1-bit output: Inverted CLKOUT1
       CLKOUT2   => clk_pixel_x5_raw, -- 1-bit output: CLKOUT2
-      CLKOUT2B  => open,         -- 1-bit output: Inverted CLKOUT2
-      CLKOUT3   => open,         -- 1-bit output: CLKOUT3
-      CLKOUT3B  => open,         -- 1-bit output: Inverted CLKOUT3
-      CLKOUT4   => open,         -- 1-bit output: CLKOUT4
-      CLKOUT5   => open,         -- 1-bit output: CLKOUT5
-      CLKOUT6   => open,         -- 1-bit output: CLKOUT6
       -- Feedback Clocks: 1-bit (each) output: Clock feedback ports
       CLKFBOUT  => clkfb_2,       -- 1-bit output: Feedback clock
       CLKFBOUTB => open,          -- 1-bit output: Inverted CLKFBOUT
@@ -387,7 +281,8 @@ BUFIO_inst : BUFG
       pixel_io_clk_x1 <= clk_pixel_x1;
       pixel_io_clk_x5 <= clk_pixel_x5;
 
-ch0: input_channel Port map (
+ch0: entity work.input_channel
+    port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -405,9 +300,11 @@ ch0: input_channel Port map (
         data_valid      => ch0_data_valid,
         data            => ch0_data,
         reset           => ser_reset,
-        symbol_sync     => ch0_symbol_sync);
+        symbol_sync     => ch0_symbol_sync
+    );
 
-ch1: input_channel Port map (
+ch1: entity work.input_channel
+    port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -425,9 +322,11 @@ ch1: input_channel Port map (
         data_valid      => ch1_data_valid,
         data            => ch1_data,
         reset           => ser_reset,
-        symbol_sync     => ch1_symbol_sync);
+        symbol_sync     => ch1_symbol_sync
+    );
 
-ch2: input_channel Port map (
+ch2: entity work.input_channel
+    port map (
         clk_mgmt        => system_clk,
         clk             => clk_pixel,
         ce              => ser_ce,
@@ -445,9 +344,10 @@ ch2: input_channel Port map (
         data_valid      => ch2_data_valid,
         data            => ch2_data,
         reset           => ser_reset,
-        symbol_sync     => ch2_symbol_sync);
+        symbol_sync     => ch2_symbol_sync
+    );
 
-    symbol_sync_i <= ch0_symbol_sync and ch1_symbol_sync and ch2_symbol_sync;
+    symbol_sync <= ch0_symbol_sync and ch1_symbol_sync and ch2_symbol_sync;
 
 hdmi_section_decode: process(clk_pixel)
     begin
@@ -487,27 +387,6 @@ hdmi_section_decode: process(clk_pixel)
                 in_dvid <= '1';
             end if;
 
-            ch0_invalid_symbol_1 <= ch0_invalid_symbol;
-            ch0_ctl_valid_1      <= ch0_ctl_valid;
-            ch0_ctl_1            <= ch0_ctl;
-            ch0_terc4_valid_1    <= ch0_terc4_valid;
-            ch0_terc4_1          <= ch0_terc4;
-            ch0_data_1           <= ch0_data;
-
-            ch1_invalid_symbol_1 <= ch1_invalid_symbol;
-            ch1_ctl_valid_1      <= ch1_ctl_valid;
-            ch1_ctl_1            <= ch1_ctl;
-            ch1_terc4_valid_1    <= ch1_terc4_valid;
-            ch1_terc4_1          <= ch1_terc4;
-            ch1_data_1           <= ch1_data;
-
-            ch2_invalid_symbol_1 <= ch2_invalid_symbol;
-            ch2_ctl_valid_1      <= ch2_ctl_valid;
-            ch2_ctl_1            <= ch2_ctl;
-            ch2_terc4_valid_1    <= ch2_terc4_valid;
-            ch2_terc4_1          <= ch2_terc4;
-            ch2_data_valid_1     <= ch2_data_valid;
-            ch2_data_1           <= ch2_data;
         end if;
     end process;
 
