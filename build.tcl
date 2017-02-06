@@ -1,10 +1,8 @@
 add_files {src/alignment_detect.vhd}
-add_files {src/conversion_to_RGB.vhd}
 add_files {src/deserialiser_1_to_10.vhd}
 add_files {src/detect_interlace.vhd}
 add_files {src/dvid_output.vhd}
 add_files {src/edid_rom.vhd}
-add_files {src/expand_422_to_444.vhd}
 add_files {src/extract_video_infopacket_data.vhd}
 add_files {src/hdmi_design.vhd}
 add_files {src/hdmi_input.vhd}

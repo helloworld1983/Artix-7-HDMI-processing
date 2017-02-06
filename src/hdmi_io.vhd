@@ -119,31 +119,12 @@ architecture Behavioral of hdmi_io is
     signal is_interlaced_i     : std_logic;
     signal is_second_field_i   : std_logic;
 
-
-    signal input_is_YCbCr      : std_Logic;
-    signal input_is_422        : std_logic;
-    signal input_is_sRGB       : std_Logic;
-
     signal raw_blank : std_logic;
     signal raw_hsync : std_logic;
     signal raw_vsync : std_logic;
     signal raw_ch2   : std_logic_vector(7 downto 0);  -- B or Cb
     signal raw_ch1   : std_logic_vector(7 downto 0);  -- G or Y
     signal raw_ch0   : std_logic_vector(7 downto 0);   -- R or Cr
-
-    signal fourfourfour_blank : std_logic;
-    signal fourfourfour_hsync : std_logic;
-    signal fourfourfour_vsync : std_logic;
-    signal fourfourfour_U     : std_logic_vector(11 downto 0);
-    signal fourfourfour_V     : std_logic_vector(11 downto 0);
-    signal fourfourfour_W     : std_logic_vector(11 downto 0);
-
-    signal rgb_blank : std_logic;
-    signal rgb_hsync : std_logic;
-    signal rgb_vsync : std_logic;
-    signal rgb_R     : std_logic_vector(11 downto 0);
-    signal rgb_G     : std_logic_vector(11 downto 0);  -- G or Y
-    signal rgb_B     : std_logic_vector(11 downto 0);   -- R or Cr
 
     -- Clocks for the pixel clock domain
     signal pixel_clk_i     : std_logic;
@@ -221,32 +202,6 @@ i_hdmi_input : entity work.hdmi_input port map (
         adp_subpacket3_bits => adp_subpacket3_bits
     );
 
-    -------------------------------------
-    -- If the input data is in 422 format
-    -- then convert it to 12-bit 444 data
-    -------------------------------------
-i_expand_422_to_444: entity work.expand_422_to_444 Port map (
-        clk          => pixel_clk_i,
-        ------------------
-        -- Incoming raw data
-        ------------------
-        in_blank  => raw_blank,
-        in_hsync  => raw_hsync,
-        in_vsync  => raw_vsync,
-        in_ch2    => raw_ch2,
-        in_ch1    => raw_ch1,
-        in_ch0    => raw_ch0,
-
-        -------------------
-        -- Processed pixels
-        -------------------
-        out_blank => fourfourfour_blank,
-        out_hsync => fourfourfour_hsync,
-        out_vsync => fourfourfour_vsync,
-        out_U     => fourfourfour_U,
-        out_V     => fourfourfour_V,
-        out_W     => fourfourfour_W
-    );
 
 i_detect_interlace: entity work.detect_interlace Port map (
     clk             => pixel_clk_i,
@@ -255,55 +210,15 @@ i_detect_interlace: entity work.detect_interlace Port map (
     is_interlaced   => is_interlaced_i,
     is_second_field => is_second_field_i);
 
-i_conversion_to_RGB: entity work.conversion_to_RGB
-    port map (
-           clk              => pixel_clk_i,
-           ------------------------
-           in_blank         => fourfourfour_blank,
-           in_hsync         => fourfourfour_hsync,
-           in_vsync         => fourfourfour_vsync,
-           in_U             => fourfourfour_U,
-           in_V             => fourfourfour_V,
-           in_W             => fourfourfour_W,
-           ------------------------
-           out_blank        => rgb_blank,
-           out_hsync        => rgb_hsync,
-           out_vsync        => rgb_vsync,
-           out_R            => rgb_R,
-           out_G            => rgb_G,
-           out_B            => rgb_B
-    );
-
     -----------------------------------------
     -- Colour space conversion yet to be done
     -----------------------------------------
-    in_blank <= rgb_blank;
-    in_hsync <= rgb_hsync;
-    in_vsync <= rgb_vsync;
-    in_blue  <= rgb_B(11 downto 4);
-    in_green <= rgb_G(11 downto 4);
-    in_red   <= rgb_R(11 downto 4);
-
-    ------------------------------------------------
-    -- Processing the non-video data #1
-    -- Extracting the Video Infopacket data we need
-    -- to correctly convert the video data
-    ------------------------------------------------
-i_extract_video_infopacket_data: entity work.extract_video_infopacket_data port map (
-    clk                 => pixel_clk_i,
-    -- ADP data
-    adp_data_valid      => adp_data_valid,
-    adp_header_bit      => adp_header_bit,
-    adp_frame_bit       => adp_frame_bit,
-    adp_subpacket0_bits => adp_subpacket0_bits,
-    adp_subpacket1_bits => adp_subpacket1_bits,
-    adp_subpacket2_bits => adp_subpacket2_bits,
-    adp_subpacket3_bits => adp_subpacket3_bits,
-    -- The stuff we need
-    input_is_YCbCr      => input_is_YCbCr,
-    input_is_422        => input_is_422,
-    input_is_sRGB       => input_is_sRGB
-);
+    in_blank <= raw_blank;
+    in_hsync <= raw_hsync;
+    in_vsync <= raw_vsync;
+    in_blue  <= raw_ch2;
+    in_green <= raw_ch1;
+    in_red   <= raw_ch0;
 
 ------------------------------------------------
 -- Outputting video data
