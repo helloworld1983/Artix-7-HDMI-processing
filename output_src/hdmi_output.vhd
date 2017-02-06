@@ -1,25 +1,25 @@
 ----------------------------------------------------------------------------------
 -- Engineer: Mike Field <hamster@snap.net.nz>
--- 
+--
 -- Module Name: DVID_output - Behavioral
 --
--- Description: Convert a stream of pixels into a DVID output 
--- 
+-- Description: Convert a stream of pixels into a DVID output
+--
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -51,12 +51,12 @@ use IEEE.NUMERIC_STD.ALL;
 library UNISIM;
 use UNISIM.VComponents.all;
 
-entity DVID_output is
-    Port ( 
+entity hdmi_output is
+    Port (
         pixel_clk       : in std_logic;  -- Driven by BUFG
         pixel_io_clk_x1 : in std_logic;  -- Driven by BUFIO
         pixel_io_clk_x5 : in std_logic;  -- Driven by BUFIO
-        
+
         -- VGA Signals
         vga_blank    : in  std_logic;
         vga_hsync    : in  std_logic;
@@ -65,16 +65,16 @@ entity DVID_output is
         vga_blue     : in  std_logic_vector(7 downto 0);
         vga_green    : in  std_logic_vector(7 downto 0);
         data_valid   : in  std_logic;
-        
+
         --- DVI-D out
         tmds_out_clk    : out   std_logic;
         tmds_out_ch0    : out   std_logic;
         tmds_out_ch1    : out   std_logic;
         tmds_out_ch2    : out   std_logic
     );
-end DVID_output;
+end hdmi_output;
 
-architecture Behavioral of DVID_output is
+architecture Behavioral of hdmi_output is
 
    component tmds_encoder is
    Port ( clk     : in  std_logic;
@@ -98,16 +98,16 @@ architecture Behavioral of DVID_output is
 
     signal reset_sr       : std_logic_vector (2 downto 0) := (others => '1');
     signal reset          : std_logic := '1';
-    
+
 begin
     reset <= reset_sr(0);
-    
+
 process(pixel_clk, data_valid)
     begin
         if data_valid = '0' then
            reset_sr <= (others => '1');
         elsif rising_edge(pixel_clk) then
-            reset_sr <= '0' & reset_sr(reset_sr'high downto 1); 
+            reset_sr <= '0' & reset_sr(reset_sr'high downto 1);
         end if;
     end process;
     ---------------------
@@ -127,7 +127,7 @@ c1_tmds: tmds_encoder port map (
         c       => (others => '0'),
         blank   => vga_blank,
         encoded => c1_tmds_symbol);
-        
+
 c2_tmds: tmds_encoder port map (
         clk     => pixel_clk,
         data    => vga_red,
@@ -137,14 +137,14 @@ c2_tmds: tmds_encoder port map (
     ---------------------
     -- Output serializers
     ---------------------
-ser_ch0: serialiser_10_to_1 port map ( 
+ser_ch0: serialiser_10_to_1 port map (
         clk    => pixel_io_clk_x1,
         clk_x5 => pixel_io_clk_x5,
         reset  => reset,
         data   => c0_tmds_symbol,
         serial => tmds_out_ch0);
-        
-ser_ch1: serialiser_10_to_1 port map ( 
+
+ser_ch1: serialiser_10_to_1 port map (
         clk    => pixel_io_clk_x1,
         clk_x5 => pixel_io_clk_x5,
         reset  => reset,

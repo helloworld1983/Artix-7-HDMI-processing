@@ -4,6 +4,7 @@ import os
 
 from litex.gen import *
 from litex.gen.genlib.resetsync import AsyncResetSynchronizer
+from litex.gen.fhdl.specials import Tristate
 
 from litex.boards.platforms import nexys_video
 
@@ -125,6 +126,30 @@ class HDMILoopback(Module):
                 o_OB=hdmi_out_pads.data2_n),
         ]
 
+        # edid
+        sdat_in = Signal()
+        sdat_oe = Signal()
+        sdat_out = Signal()
+
+        self.specials += Tristate(hdmi_in_pads.sda,
+                                  sdat_out,
+                                  sdat_oe,
+                                  sdat_in)
+        self.comb += [
+            hdmi_in_pads.hpa.eq(1),
+            hdmi_in_pads.txen.eq(1),
+        ]
+        self.specials += [
+            Instance("edid_rom",
+                i_clk=ClockSignal(),
+                i_sclk=hdmi_in_pads.scl,
+                i_sdat_in=sdat_in,
+                o_sdat_oe=sdat_oe,
+                o_sdat_out=sdat_out,
+            )
+        ]
+
+        # hdmi input
         blank = Signal()
         hsync = Signal()
         vsync = Signal()
@@ -137,34 +162,34 @@ class HDMILoopback(Module):
         pixel_io_clk_x5 = Signal()
 
         self.specials += [
-            Instance("hdmi_io",
+            Instance("hdmi_input",
                 i_clk100=ClockSignal(),
                 i_clk200=ClockSignal("clk200"),
-
-                io_hdmi_rx_cec=hdmi_in_pads.cec,
-                o_hdmi_rx_hpa=hdmi_in_pads.hpa,
-                i_hdmi_rx_scl=hdmi_in_pads.scl,
-                io_hdmi_rx_sda=hdmi_in_pads.sda,
-                o_hdmi_rx_txen=hdmi_in_pads.txen,
-                i_hdmi_rx_clk=hdmi_in_clk,
-                i_hdmi_rx=Cat(hdmi_in_data0, hdmi_in_data1, hdmi_in_data2),
-
 
                 o_pixel_clk=pixel_clk,
                 o_pixel_io_clk_x1=pixel_io_clk_x1,
                 o_pixel_io_clk_x5=pixel_io_clk_x5,
 
-                o_in_blank=blank,
-                o_in_hsync=hsync,
-                o_in_vsync=vsync,
-                o_in_red=red,
-                o_in_green=green,
-                o_in_blue=blue
+                i_hdmi_in_clk=hdmi_in_clk,
+                i_hdmi_in_ch0=hdmi_in_data2,
+                i_hdmi_in_ch1=hdmi_in_data1,
+                i_hdmi_in_ch2=hdmi_in_data0,
+
+                o_raw_blank=blank,
+                o_raw_hsync=hsync,
+                o_raw_vsync=vsync,
+                o_raw_ch0=blue,
+                o_raw_ch1=green,
+                o_raw_ch2=red
             )
         ]
 
+        platform.add_source_dir("./input_src/")
+        platform.add_period_constraint(hdmi_in_pads.clk_p, 6.7)
+
+        # hdmi output
         self.specials += [
-            Instance("DVID_output",
+            Instance("hdmi_output",
                 i_pixel_clk=pixel_clk,
                 i_pixel_io_clk_x1=pixel_io_clk_x1,
                 i_pixel_io_clk_x5=pixel_io_clk_x5,
@@ -184,13 +209,7 @@ class HDMILoopback(Module):
             )
         ]
         self.comb += hdmi_out_pads.scl.eq(1)
-
-        platform.add_source_dir("./input_src/")
         platform.add_source_dir("./output_src/")
-        platform.add_source_dir("./")
-
-        platform.add_period_constraint(hdmi_in_pads.clk_p, 6.7)
-
 
 def main():
     platform = nexys_video.Platform()

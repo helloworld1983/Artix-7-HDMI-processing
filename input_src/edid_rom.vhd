@@ -7,19 +7,19 @@
 --
 ------------------------------------------------------------------------------------
 -- The MIT License (MIT)
--- 
+--
 -- Copyright (c) 2015 Michael Alan Field
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -35,7 +35,7 @@
 -- per day, it is equivalent to about 6 months of work. I'm more than happy
 -- to share it if you can make use of it. It is released under the MIT license,
 -- so you are not under any onus to say thanks, but....
--- 
+--
 -- If you what to say thanks for this design how about trying PayPal?
 --  Educational use - Enough for a beer
 --  Hobbyist use    - Enough for a pizza
@@ -51,10 +51,12 @@ library UNISIM;
 use UNISIM.VComponents.all;
 
 entity edid_rom is
-   port ( clk      : in    std_logic;
-          sclk_raw : in    std_logic;
-          sdat_raw : inout std_logic := 'Z';
-          edid_debug : out std_logic_vector(2 downto 0) := (others => '0')
+   port ( clk        : in  std_logic;
+          sclk       : in  std_logic;
+          sdat_in    : in  std_logic;
+          sdat_oe    : out std_logic;
+          sdat_out   : out std_logic;
+          edid_debug : out std_logic_vector(2 downto 0)
   );
 end entity;
 
@@ -67,7 +69,7 @@ architecture Behavioral of edid_rom is
       -- Header
       x"00",x"FF",x"FF",x"FF",x"FF",x"FF",x"FF",x"00",
       -- EISA ID - Manufacturer, Product,
-      x"04",x"43", x"07",x"f2", 
+      x"04",x"43", x"07",x"f2",
       -- EISA ID -Serial
       x"01",x"00",x"00",x"00",
       -- Model/year
@@ -77,23 +79,23 @@ architecture Behavioral of edid_rom is
       ------------------------------------
       ------------------------------------
       -- Digital Video using DVI, 8 bits
-      --- x"81",   -- Checksum 0xB6 
+      --- x"81",   -- Checksum 0xB6
       ------------------------------------
       -- Digital Video using HDMI, 8 bits
-      x"A2", -- Checksum 0x95 
+      x"A2", -- Checksum 0x95
       ------------------------------------
       -- Aspect ratio, flag, gamma
-      x"4f", x"00", x"78", 
-      ------------------------------------      
-      -- Features 
+      x"4f", x"00", x"78",
+      ------------------------------------
+      -- Features
       x"3E",
       -- Display x,y Chromaticity V Breaks here!
       x"EE", x"91", x"a3", x"54", x"4c", x"99", x"26", x"0f", x"50", x"54",
       -- Established timings
       x"20", x"00", x"00",
       -- Standard timings
-      x"01", x"01", x"01", x"01", x"01", x"01", x"01", x"01", 
-      x"01", x"01", x"01", x"01", x"01", x"01", x"01", x"01", 
+      x"01", x"01", x"01", x"01", x"01", x"01", x"01", x"01",
+      x"01", x"01", x"01", x"01", x"01", x"01", x"01", x"01",
       ------- End of BASE EDID ---------------------------------
 
       ----- 18 byte data block 1080p --------
@@ -160,7 +162,7 @@ architecture Behavioral of edid_rom is
       ----- End of EDID block
       -- Extension flag & checksum
       x"01", x"74",
-      
+
        x"02", x"03", x"18", x"72", x"47", x"90", x"85", x"04", x"03", x"02", x"07", x"06", x"23", x"09", x"07", x"07",
        x"83", x"01", x"00", x"00", x"65", x"03", x"0C", x"00", x"10", x"00", x"8E", x"0A", x"D0", x"8A", x"20", x"E0",
        x"2d", x"10", x"10", x"3E", x"96", x"00", x"1F", x"09", x"00", x"00", x"00", x"18", x"8E", x"0A", x"D0", x"8A",
@@ -169,13 +171,13 @@ architecture Behavioral of edid_rom is
        x"8E", x"0A", x"A0", x"14", x"51", x"F0", x"16", x"00", x"26", x"7C", x"43", x"00", x"04", x"03", x"00", x"00",
        x"00", x"98", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
        x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"C9"
-      
+
       );
 
    signal sclk_delay  : std_logic_vector(2 downto 0);
    signal sdat_delay  : unsigned(6 downto 0);
-   
-   type t_state is (   state_idle, 
+
+   type t_state is (   state_idle,
                      -- States to support writing the device's address
                      state_start,
                      state_dev7,
@@ -197,7 +199,7 @@ architecture Behavioral of edid_rom is
                      state_addr1,
                      state_addr0,
                      state_addr_ack,
-                     -- States to support the selector device 
+                     -- States to support the selector device
                      state_selector_ack_device_write,
                      state_selector_addr7,
                      state_selector_addr6,
@@ -232,30 +234,24 @@ architecture Behavioral of edid_rom is
    signal sdat_delay_last : std_logic := '0';
 begin
 
-i_IOBUF: IOBUF
-    generic map (
-       DRIVE => 12,
-       IOSTANDARD => "DEFAULT",
-       SLEW => "SLOW")
-    port map (
-       O  => sdat_input, -- Buffer output
-       IO => sdat_raw,   -- Buffer inout port (connect directly to top-level port)
-       I  => '0',        -- Buffer input
-       T  => data_out_sr(data_out_sr'high)      -- 3-state enable input, high=input, low=output 
-    );
+
+    sdat_oe  <= not data_out_sr(data_out_sr'high);
+    sdat_out <= '0';
+    sdat_input <= sdat_in;
+
     edid_debug(0) <= std_logic(sdat_delay(sdat_delay'high));
-    edid_debug(1) <= sclk_raw; 
+    edid_debug(1) <= sclk;
 
 process(clk)
-   begin   
+   begin
       if rising_edge(clk) then
-         
+
          -- falling edge on SDAT while sclk is held high = START condition
          if sclk_delay(1) = '1' and sclk_delay(0) = '1' and sdat_delay_last  = '1' and sdat_delay(sdat_delay'high) = '0' then
             state <= state_start;
             edid_debug(2) <= '1';
          end if;
-         
+
          -- rising edge on SDAT while sclk is held high = STOP condition
          if sclk_delay(1) = '1' and sclk_delay(0) = '1' and sdat_delay_last = '0' and sdat_delay(sdat_delay'high) = '1' then
             state <= state_idle;
@@ -263,16 +259,16 @@ process(clk)
             edid_debug(2) <= '0';
          end if;
 
-         -- rising edge on SCLK - usually a data bit 
+         -- rising edge on SCLK - usually a data bit
          if sclk_delay(1) = '1' and sclk_delay(0) = '0' then
             -- Move data into a shift register
             data_shift_reg <= data_shift_reg(data_shift_reg'high-1 downto 0) & std_logic(sdat_delay(sdat_delay'high));
          end if;
-         
+
          -- falling edge on SCLK - time to change state
          if sclk_delay(1) = '0' and sclk_delay(0) = '1' then
-            data_out_sr <= data_out_sr(data_out_sr'high-1 downto 0) & '1'; -- Add Pull up   
-            case state is 
+            data_out_sr <= data_out_sr(data_out_sr'high-1 downto 0) & '1'; -- Add Pull up
+            case state is
                when state_start            => state <= state_dev7;
                when state_dev7             => state <= state_dev6;
                when state_dev6             => state <= state_dev5;
@@ -292,7 +288,7 @@ process(clk)
                                                  data_out_sr(data_out_sr'high) <= '0'; -- Send Slave ACK
                                               else
                                                  state <= state_idle;
-                                              end if;               
+                                              end if;
                when state_ack_device_write => state <= state_addr7;
                when state_addr7            => state <= state_addr6;
                when state_addr6            => state <= state_addr5;
@@ -331,33 +327,33 @@ process(clk)
                when state_read3            => state <= state_read2;
                when state_read2            => state <= state_read1;
                when state_read1            => state <= state_read0;
-               when state_read0            => state <= state_read_ack; 
-               when state_read_ack         => if sdat_delay(sdat_delay'high) = '0' then 
+               when state_read0            => state <= state_read_ack;
+               when state_read_ack         => if sdat_delay(sdat_delay'high) = '0' then
                                                  state <= state_read7;
                                                  data_out_sr <=  edid_rom(to_integer(addr_reg+1));
-                                              else 
+                                              else
                                                  state <= state_idle;
-                                              end if;                     
+                                              end if;
                                               addr_reg <= addr_reg+1;
                when others                 => state <= state_idle;
             end case;
          end if;
         sdat_delay_last <= sdat_delay(sdat_delay'high);
          -- Synchronisers for SCLK and SDAT
-         sclk_delay <= sclk_raw & sclk_delay(sclk_delay'high downto 1);
-         -- Resolve any 'Z' state in simulation - make it pull up. 
-         if sdat_input = '0'  then 
-            if sdat_delay(sdat_delay'high) = '1' then 
+         sclk_delay <= sclk & sclk_delay(sclk_delay'high downto 1);
+         -- Resolve any 'Z' state in simulation - make it pull up.
+         if sdat_input = '0'  then
+            if sdat_delay(sdat_delay'high) = '1' then
                 sdat_delay <= sdat_delay - 1;
             else
                 sdat_delay <= (others => '0');
-            end if; 
+            end if;
          else
-            if sdat_delay(sdat_delay'high) = '0' then 
+            if sdat_delay(sdat_delay'high) = '0' then
                  sdat_delay <= sdat_delay + 1;
              else
                  sdat_delay <= (others => '1');
-             end if; 
+             end if;
          end if;
       end if;
    end process;
