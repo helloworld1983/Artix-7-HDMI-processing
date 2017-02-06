@@ -93,11 +93,6 @@ begin
 i_hdmi_io: entity work.hdmi_io port map (
         clk100        => clk100,
         ---------------------
-        -- Control signals
-        ---------------------
-        clock_locked     => open,
-        data_synced      => open,
-        ---------------------
         -- HDMI input signals
         ---------------------
         hdmi_rx_cec   => hdmi_rx_cec,

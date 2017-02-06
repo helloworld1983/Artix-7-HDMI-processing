@@ -52,11 +52,6 @@ use UNISIM.VComponents.all;
 entity hdmi_io is
     port (
         clk100        : in STD_LOGIC;
-        -------------------------------
-        -- Control signals
-        -------------------------------
-        clock_locked   : out std_logic;
-        data_synced    : out std_logic;
 
         -------------------------------
         --HDMI input signals
@@ -87,7 +82,6 @@ entity hdmi_io is
         -------------------------------
         -- VGA data recovered from HDMI
         -------------------------------
-        in_hdmi_detected : out std_logic;
         in_blank  : out std_logic;
         in_hsync  : out std_logic;
         in_vsync  : out std_logic;
@@ -109,22 +103,12 @@ end entity;
 
 architecture Behavioral of hdmi_io is
 
-    signal adp_data_valid      : std_logic;
-    signal adp_header_bit      : std_logic;
-    signal adp_frame_bit       : std_logic;
-    signal adp_subpacket0_bits : std_logic_vector(1 downto 0);
-    signal adp_subpacket1_bits : std_logic_vector(1 downto 0);
-    signal adp_subpacket2_bits : std_logic_vector(1 downto 0);
-    signal adp_subpacket3_bits : std_logic_vector(1 downto 0);
-    signal is_interlaced_i     : std_logic;
-    signal is_second_field_i   : std_logic;
-
     signal raw_blank : std_logic;
     signal raw_hsync : std_logic;
     signal raw_vsync : std_logic;
     signal raw_ch2   : std_logic_vector(7 downto 0);  -- B or Cb
     signal raw_ch1   : std_logic_vector(7 downto 0);  -- G or Y
-    signal raw_ch0   : std_logic_vector(7 downto 0);   -- R or Cr
+    signal raw_ch0   : std_logic_vector(7 downto 0);  -- R or Cr
 
     -- Clocks for the pixel clock domain
     signal pixel_clk_i     : std_logic;
@@ -144,6 +128,7 @@ architecture Behavioral of hdmi_io is
 
     signal detect_sr : std_logic_vector(7 downto 0) := (others => '0');
 begin
+
     pixel_clk <= pixel_clk_i;
     hdmi_rx_hpa  <= '1';
     hdmi_rx_txen <= '1';
@@ -182,33 +167,17 @@ i_hdmi_input : entity work.hdmi_input port map (
         hdmi_in_ch1   => tmds_in_ch1,
         hdmi_in_ch2   => tmds_in_ch2,
         -- are the HDMI symbols in sync?
-        symbol_sync   => data_synced,
-        pll_locked    => clock_locked,
+        symbol_sync   => open,
+        pll_locked    => open,
         -- VGA internal Signals
-        hdmi_detected => in_hdmi_detected,
+        hdmi_detected => open,
         raw_blank     => raw_blank,
         raw_hsync     => raw_hsync,
         raw_vsync     => raw_vsync,
         raw_ch2       => raw_ch2,
         raw_ch1       => raw_ch1,
-        raw_ch0       => raw_ch0,
-        -- ADP data
-        adp_data_valid      => adp_data_valid,
-        adp_header_bit      => adp_header_bit,
-        adp_frame_bit       => adp_frame_bit,
-        adp_subpacket0_bits => adp_subpacket0_bits,
-        adp_subpacket1_bits => adp_subpacket1_bits,
-        adp_subpacket2_bits => adp_subpacket2_bits,
-        adp_subpacket3_bits => adp_subpacket3_bits
+        raw_ch0       => raw_ch0
     );
-
-
-i_detect_interlace: entity work.detect_interlace Port map (
-    clk             => pixel_clk_i,
-    hsync           => raw_hsync,
-    vsync           => raw_vsync,
-    is_interlaced   => is_interlaced_i,
-    is_second_field => is_second_field_i);
 
     -----------------------------------------
     -- Colour space conversion yet to be done

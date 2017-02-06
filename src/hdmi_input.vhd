@@ -76,16 +76,7 @@ entity hdmi_input is
         raw_vsync : out std_logic;
         raw_ch0   : out std_logic_vector(7 downto 0);
         raw_ch1   : out std_logic_vector(7 downto 0);
-        raw_ch2   : out std_logic_vector(7 downto 0);
-        -- ADP data
-        adp_data_valid      : out std_logic;
-        adp_header_bit      : out std_logic;
-        adp_frame_bit       : out std_logic;
-        adp_subpacket0_bits : out std_logic_vector(1 downto 0);
-        adp_subpacket1_bits : out std_logic_vector(1 downto 0);
-        adp_subpacket2_bits : out std_logic_vector(1 downto 0);
-        adp_subpacket3_bits : out std_logic_vector(1 downto 0)
-
+        raw_ch2   : out std_logic_vector(7 downto 0)
     );
 end hdmi_input;
 
@@ -220,10 +211,6 @@ architecture Behavioral of hdmi_input is
     signal vdp_prefix_seen      : std_logic := '0';
     signal in_vdp               : std_logic := '0';
 
-    signal adp_prefix_detect    : std_logic_vector(7 downto 0) := (others => '0');
-    signal adp_guardband_detect : std_logic := '0';
-    signal adp_prefix_seen      : std_logic := '0';
-    signal in_adp               : std_logic := '0';
     signal dvid_mode            : std_logic := '0';
     signal last_was_ctl         : std_logic := '0';
 
@@ -482,7 +469,6 @@ hdmi_section_decode: process(clk_pixel)
                 -- video or aux data period it doesn't have any trailing guard band
                 -------------------------------------------------------------------
                 in_vdp    <= '0';
-                in_adp    <= '0';
                 in_dvid   <= '0';
                 raw_vsync <= ch0_ctl(1);
                 raw_hsync <= ch0_ctl(0);
@@ -491,10 +477,8 @@ hdmi_section_decode: process(clk_pixel)
                 raw_ch1   <= (others => '0');
                 raw_ch0   <= (others => '0');
                 last_was_ctl   <= '1';
-                adp_data_valid <= '0';
             else
                 last_was_ctl <= '0';
-                adp_data_valid <= '0';
                 if in_vdp = '1' then
                     raw_vsync <= '0';
                     raw_hsync <= '0';
@@ -516,22 +500,6 @@ hdmi_section_decode: process(clk_pixel)
                     raw_ch2   <= ch2_data;
                     raw_ch1   <= ch1_data;
                     raw_ch0   <= ch0_data;
-                elsif in_adp = '1' then
-                    -- In the Aux Data Period Period
-                    raw_vsync <= ch0_terc4(1);
-                    raw_hsync <= ch0_terc4(0);
-                    raw_blank <= '1';
-                    raw_ch0   <= (others => '0');
-                    raw_ch1   <= (others => '0');
-                    raw_ch2   <= (others => '0');
-                    -- ADP data extraction
-                    adp_data_valid      <= '1';
-                    adp_header_bit      <= ch0_terc4(2);
-                    adp_frame_bit       <= ch0_terc4(3);
-                    adp_subpacket0_bits <= ch2_terc4(0) & ch1_terc4(0);
-                    adp_subpacket1_bits <= ch2_terc4(1) & ch1_terc4(1);
-                    adp_subpacket2_bits <= ch2_terc4(2) & ch1_terc4(2);
-                    adp_subpacket3_bits <= ch2_terc4(3) & ch1_terc4(3);
                 end if;
             end if;
 
@@ -549,37 +517,6 @@ hdmi_section_decode: process(clk_pixel)
                 end if;
             end if;
 
-            ---------------------------------------------
-            -- See if we can detect the ADP guardband
-            --
-            -- The ADP guardband includes HSYNC and VSYNC
-            -- encoded in TERC4 coded in Ch0.
-            ---------------------------------------------
-            adp_prefix_detect <= adp_prefix_detect(6 downto 0) & '0';
-            adp_prefix_seen <= '0';
-            if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch1_ctl_valid = '1' then
-                if ch1_ctl = "01" and ch2_ctl = "01" then
-                    adp_prefix_detect(0) <= '1';
-                    if adp_prefix_detect = "01111111" then
-                        adp_prefix_seen <= '1';
-                    end if;
-                end if;
-            end if;
-            ---------------------------------------------
-            -- See if we can detect the ADP guardband
-            --
-            -- The ADP guardband includes HSYNC and VSYNC
-            -- encoded in TERC4 coded in Ch0 - annoying!
-            ---------------------------------------------
-            adp_guardband_detect <= '0';
-            if in_vdp = '0' and ch0_terc4_valid = '1' and ch1_guardband_valid = '1' and ch1_guardband_valid = '1' then
-                if ch0_terc4(3 downto 2) = "11" and ch1_guardband = "0" and ch2_guardband = "0" then
-                    raw_vsync <= ch0_terc4(1);
-                    raw_hsync <= ch0_terc4(0);
-                    adp_guardband_detect <= adp_prefix_seen;
-                    in_adp <= adp_guardband_detect AND (not in_adp) and (not in_vdp);
-                end if;
-            end if;
             -----------------------------------------
             -- See if we can detect the VDP guardband
             -- This is pretty nices as the guard
@@ -589,7 +526,7 @@ hdmi_section_decode: process(clk_pixel)
                 -- TERC Coded for the VDP guard band.
                 if ch0_guardband = "1" and ch1_guardband = "0" and ch2_guardband = "1" then
                    vdp_guardband_detect <= vdp_prefix_seen;
-                   in_vdp <= vdp_guardband_detect AND (not in_adp) and (not in_vdp);
+                   in_vdp <= vdp_guardband_detect AND (not in_vdp);
                    dvid_mode <= '0';
                 end if;
             end if;
@@ -604,7 +541,7 @@ hdmi_section_decode: process(clk_pixel)
             -- DVI-D data, and not HDMI
             -------------------------------------------------------------
             if ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1'
-                and last_was_ctl = '1' and vdp_prefix_seen = '0' and adp_prefix_seen = '0' then
+                and last_was_ctl = '1' and vdp_prefix_seen = '0' then
                dvid_mode <= '1';
             end if;
 
