@@ -61,22 +61,18 @@ entity hdmi_io is
         hdmi_rx_scl   : in    std_logic;
         hdmi_rx_sda   : inout std_logic;
         hdmi_rx_txen  : out   std_logic;
-        hdmi_rx_clk_n : in    std_logic;
-        hdmi_rx_clk_p : in    std_logic;
-        hdmi_rx_n     : in    std_logic_vector(2 downto 0);
-        hdmi_rx_p     : in    std_logic_vector(2 downto 0);
+        hdmi_rx_clk   : in    std_logic;
+        hdmi_rx       : in    std_logic_vector(2 downto 0);
 
         -------------
         -- HDMI out
         -------------
         hdmi_tx_cec   : inout std_logic;
-        hdmi_tx_clk_n : out   std_logic;
-        hdmi_tx_clk_p : out   std_logic;
+        hdmi_tx_clk   : out   std_logic;
         hdmi_tx_hpd   : in    std_logic;
         hdmi_tx_rscl  : inout std_logic;
         hdmi_tx_rsda  : inout std_logic;
-        hdmi_tx_p     : out   std_logic_vector(2 downto 0);
-        hdmi_tx_n     : out   std_logic_vector(2 downto 0);
+        hdmi_tx       : out   std_logic_vector(2 downto 0);
 
         pixel_clk : out std_logic;
         -------------------------------
@@ -115,18 +111,6 @@ architecture Behavioral of hdmi_io is
     signal pixel_io_clk_x1 : std_logic;
     signal pixel_io_clk_x5 : std_logic;
 
-    -- The serial data
-    signal tmds_in_clk  : std_logic;
-    signal tmds_in_ch0  : std_logic;
-    signal tmds_in_ch1  : std_logic;
-    signal tmds_in_ch2  : std_logic;
-
-    signal tmds_out_clk : std_logic;
-    signal tmds_out_ch0 : std_logic;
-    signal tmds_out_ch1 : std_logic;
-    signal tmds_out_ch2 : std_logic;
-
-    signal detect_sr : std_logic_vector(7 downto 0) := (others => '0');
 begin
 
     pixel_clk <= pixel_clk_i;
@@ -140,21 +124,6 @@ i_edid_rom: entity work.edid_rom  port map (
              sdat_raw => hdmi_rx_sda,
              edid_debug => open);
 
-    ---------------------
-    -- Input buffers
-    ---------------------
-in_clk_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
- port map ( I  => hdmi_rx_clk_p, IB => hdmi_rx_clk_n, O => tmds_in_clk);
-
-in_rx0_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
- port map ( I  => hdmi_rx_p(0),  IB => hdmi_rx_n(0),  O  => tmds_in_ch0);
-
-in_rx1_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
- port map ( I  => hdmi_rx_p(1),  IB => hdmi_rx_n(1),  O  => tmds_in_ch1);
-
-in_rx2_buf: IBUFDS generic map ( IOSTANDARD => "TMDS_33")
- port map ( I  => hdmi_rx_p(2),  IB => hdmi_rx_n(2),  O  => tmds_in_ch2);
-
 i_hdmi_input : entity work.hdmi_input port map (
         system_clk      => clk100,
         -- Pixel and serializer clocks
@@ -162,10 +131,10 @@ i_hdmi_input : entity work.hdmi_input port map (
         pixel_io_clk_x1 => pixel_io_clk_x1,
         pixel_io_clk_x5 => pixel_io_clk_x5,
         --- HDMI input signals
-        hdmi_in_clk   => tmds_in_clk,
-        hdmi_in_ch0   => tmds_in_ch2, -- FIXME
-        hdmi_in_ch1   => tmds_in_ch1, -- FIXME
-        hdmi_in_ch2   => tmds_in_ch0, -- FIXME
+        hdmi_in_clk   => hdmi_rx_clk,
+        hdmi_in_ch0   => hdmi_rx(2), -- FIXME
+        hdmi_in_ch1   => hdmi_rx(1), -- FIXME
+        hdmi_in_ch2   => hdmi_rx(0), -- FIXME
         -- are the HDMI symbols in sync?
         symbol_sync   => open,
         pll_locked    => open,
@@ -206,10 +175,10 @@ i_DVID_output: entity work.DVID_output port map (
         vga_green     => out_green,
 
         --- HDMI out
-        tmds_out_clk  => tmds_out_clk,
-        tmds_out_ch0  => tmds_out_ch0,
-        tmds_out_ch1  => tmds_out_ch1,
-        tmds_out_ch2  => tmds_out_ch2
+        tmds_out_clk  => hdmi_tx_clk,
+        tmds_out_ch0  => hdmi_tx(0),
+        tmds_out_ch1  => hdmi_tx(1),
+        tmds_out_ch2  => hdmi_tx(2)
     );
 
     -----------------------------
@@ -218,20 +187,5 @@ i_DVID_output: entity work.DVID_output port map (
     hdmi_tx_rsda  <= 'Z';
     hdmi_tx_cec   <= 'Z';
     hdmi_tx_rscl  <= '1';
-
-    -----------------
-    -- Output buffers
-    -----------------
-out_clk_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
-    port map ( O  => hdmi_tx_clk_p, OB => hdmi_tx_clk_n, I => tmds_out_clk);
-
-out_tx0_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
-    port map ( O  => hdmi_tx_p(0), OB => hdmi_tx_n(0), I  => tmds_out_ch0);
-
-out_tx1_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
-    port map ( O  => hdmi_tx_p(1), OB => hdmi_tx_n(1), I  => tmds_out_ch1);
-
-out_tx2_buf: OBUFDS generic map ( IOSTANDARD => "TMDS_33",  SLEW => "FAST")
-    port map ( O  => hdmi_tx_p(2), OB => hdmi_tx_n(2), I  => tmds_out_ch2);
 
 end Behavioral;

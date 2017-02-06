@@ -63,6 +63,68 @@ class HDMILoopback(Module):
         hdmi_in_pads = platform.request("hdmi_in")
         hdmi_out_pads = platform.request("hdmi_out")
 
+        # input buffers
+        hdmi_in_clk = Signal()
+        hdmi_in_data0 = Signal()
+        hdmi_in_data1 = Signal()
+        hdmi_in_data2 = Signal()
+
+        self.specials += [
+            Instance("IBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                i_I=hdmi_in_pads.clk_p,
+                i_IB=hdmi_in_pads.clk_n,
+                o_O=hdmi_in_clk),
+            Instance("IBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                i_I=hdmi_in_pads.data0_p,
+                i_IB=hdmi_in_pads.data0_n,
+                o_O=hdmi_in_data0),
+            Instance("IBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                i_I=hdmi_in_pads.data1_p,
+                i_IB=hdmi_in_pads.data1_n,
+                o_O=hdmi_in_data1),
+            Instance("IBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                i_I=hdmi_in_pads.data2_p,
+                i_IB=hdmi_in_pads.data2_n,
+                o_O=hdmi_in_data2),
+        ]
+
+        # output buffers
+        hdmi_out_clk = Signal()
+        hdmi_out_data0 = Signal()
+        hdmi_out_data1 = Signal()
+        hdmi_out_data2 = Signal()
+
+        self.specials += [
+            Instance("OBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                p_SLEW="FAST",
+                i_I=hdmi_out_clk,
+                o_O=hdmi_out_pads.clk_p,
+                o_OB=hdmi_out_pads.clk_n),
+            Instance("OBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                p_SLEW="FAST",
+                i_I=hdmi_out_data0,
+                o_O=hdmi_out_pads.data0_p,
+                o_OB=hdmi_out_pads.data0_n),
+            Instance("OBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                p_SLEW="FAST",
+                i_I=hdmi_out_data1,
+                o_O=hdmi_out_pads.data1_p,
+                o_OB=hdmi_out_pads.data1_n),
+            Instance("OBUFDS",
+                p_IOSTANDARD="TMDS_33",
+                p_SLEW="FAST",
+                i_I=hdmi_out_data2,
+                o_O=hdmi_out_pads.data2_p,
+                o_OB=hdmi_out_pads.data2_n),
+        ]
+
         blank = Signal()
         hsync = Signal()
         vsync = Signal()
@@ -79,27 +141,19 @@ class HDMILoopback(Module):
                 i_hdmi_rx_scl=hdmi_in_pads.scl,
                 io_hdmi_rx_sda=hdmi_in_pads.sda,
                 o_hdmi_rx_txen=hdmi_in_pads.txen,
-                i_hdmi_rx_clk_p=hdmi_in_pads.clk_p,
-                i_hdmi_rx_clk_n=hdmi_in_pads.clk_n,
-                i_hdmi_rx_p=Cat(hdmi_in_pads.data0_p,
-                                hdmi_in_pads.data1_p,
-                                hdmi_in_pads.data2_p),
-                i_hdmi_rx_n=Cat(hdmi_in_pads.data0_n,
-                                hdmi_in_pads.data1_n,
-                                hdmi_in_pads.data2_n),
+                i_hdmi_rx_clk=hdmi_in_clk,
+                i_hdmi_rx=Cat(hdmi_in_data0,
+                              hdmi_in_data1,
+                              hdmi_in_data2),
 
                 io_hdmi_tx_cec=hdmi_out_pads.cec,
-                o_hdmi_tx_clk_p=hdmi_out_pads.clk_p,
-                o_hdmi_tx_clk_n=hdmi_out_pads.clk_n,
+                o_hdmi_tx_clk=hdmi_out_clk,
                 i_hdmi_tx_hpd=hdmi_out_pads.hdp,
                 io_hdmi_tx_rscl=hdmi_out_pads.scl,
                 io_hdmi_tx_rsda=hdmi_out_pads.sda,
-                o_hdmi_tx_p=Cat(hdmi_out_pads.data0_p,
-                                hdmi_out_pads.data1_p,
-                                hdmi_out_pads.data2_p),
-                o_hdmi_tx_n=Cat(hdmi_out_pads.data0_n,
-                                hdmi_out_pads.data1_n,
-                                hdmi_out_pads.data2_n),
+                o_hdmi_tx=Cat(hdmi_out_data0,
+                              hdmi_out_data1,
+                              hdmi_out_data2),
 
                 #o_pixel_clk=,
 
