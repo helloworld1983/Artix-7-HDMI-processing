@@ -54,8 +54,6 @@ use UNISIM.VComponents.all;
 entity hdmi_input is
     Port (
         system_clk      : in  std_logic;
-
-        debug           : out std_logic_vector(5 downto 0);
         hdmi_detected   : out std_logic;
 
         pixel_clk       : out std_logic;  -- Driven by BUFG
@@ -235,8 +233,6 @@ begin
     pll_locked  <= locked;
     symbol_sync <= symbol_sync_i;
     reset       <= std_logic(reset_counter(reset_counter'high));
-
-    debug       <= ch2_invalid_symbol & ch1_invalid_symbol & ch0_invalid_symbol & dvid_mode & locked & symbol_sync_i;
 
     --------------------------------------------
     -- a 200MHz clock for the IDELAY reference

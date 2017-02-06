@@ -55,10 +55,6 @@ use UNISIM.VComponents.all;
 entity hdmi_design is
     Port (
         clk100    : in STD_LOGIC;
-        -- Control signals
-        led           : out   std_logic_vector(7 downto 0) :=(others => '0');
-        sw            : in    std_logic_vector(7 downto 0) :=(others => '0');
-        debug_pmod    : out   std_logic_vector(7 downto 0) :=(others => '0');
 
         --HDMI input signals
         hdmi_rx_cec   : inout std_logic;
@@ -84,65 +80,6 @@ entity hdmi_design is
 end hdmi_design;
 
 architecture Behavioral of hdmi_design is
-    component hdmi_io is
-    Port (
-        clk100    : in STD_LOGIC;
-        -------------------------------
-        -- Control signals
-        -------------------------------
-        clock_locked  : out std_logic;
-        data_synced   : out std_logic;
-        debug         : out std_logic_vector(7 downto 0);
-        -------------------------------
-        --HDMI input signals
-        -------------------------------
-        hdmi_rx_cec   : inout std_logic;
-        hdmi_rx_hpa   : out   std_logic;
-        hdmi_rx_scl   : in    std_logic;
-        hdmi_rx_sda   : inout std_logic;
-        hdmi_rx_txen  : out   std_logic;
-        hdmi_rx_clk_n : in    std_logic;
-        hdmi_rx_clk_p : in    std_logic;
-        hdmi_rx_n     : in    std_logic_vector(2 downto 0);
-        hdmi_rx_p     : in    std_logic_vector(2 downto 0);
-
-        -------------
-        -- HDMI out
-        -------------
-        hdmi_tx_cec   : inout std_logic;
-        hdmi_tx_clk_n : out   std_logic;
-        hdmi_tx_clk_p : out   std_logic;
-        hdmi_tx_hpd   : in    std_logic;
-        hdmi_tx_rscl  : inout std_logic;
-        hdmi_tx_rsda  : inout std_logic;
-        hdmi_tx_p     : out   std_logic_vector(2 downto 0);
-        hdmi_tx_n     : out   std_logic_vector(2 downto 0);
-
-        pixel_clk     : out std_logic;
-        -------------------------------
-        -- VGA data recovered from HDMI
-        -------------------------------
-        in_hdmi_detected : out std_logic;
-        in_blank        : out std_logic;
-        in_hsync        : out std_logic;
-        in_vsync        : out std_logic;
-        in_red          : out std_logic_vector(7 downto 0);
-        in_green        : out std_logic_vector(7 downto 0);
-        in_blue         : out std_logic_vector(7 downto 0);
-        is_interlaced   : out std_logic;
-        is_second_field : out std_logic;
-
-        -----------------------------------
-        -- VGA data to be converted to HDMI
-        -----------------------------------
-        out_blank     : in  std_logic;
-        out_hsync     : in  std_logic;
-        out_vsync     : in  std_logic;
-        out_red       : in  std_logic_vector(7 downto 0);
-        out_green     : in  std_logic_vector(7 downto 0);
-        out_blue      : in  std_logic_vector(7 downto 0)
-    );
-    end component;
 
     signal blank  : std_logic;
     signal hsync  : std_logic;
@@ -153,14 +90,13 @@ architecture Behavioral of hdmi_design is
 
 begin
 
-i_hdmi_io: hdmi_io port map (
+i_hdmi_io: entity work.hdmi_io port map (
         clk100        => clk100,
         ---------------------
         -- Control signals
         ---------------------
         clock_locked     => open,
         data_synced      => open,
-        debug            => open,
         ---------------------
         -- HDMI input signals
         ---------------------
@@ -197,8 +133,6 @@ i_hdmi_io: hdmi_io port map (
         in_red          => red,
         in_green        => green,
         in_blue         => blue,
-        is_interlaced   => open,
-        is_second_field => open,
 
         -----------------------------------
         -- VGA data to be converted to HDMI
