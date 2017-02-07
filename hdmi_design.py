@@ -198,7 +198,6 @@ class HDMILoopback(Module):
         self.specials += [
             Instance("hdmi_input",
                 i_clk100=ClockSignal(),
-                i_clk200=ClockSignal("clk200"),
 
                 i_clk_pixel=pix_clk,
                 i_clk_pixel_x1=pix_clk,

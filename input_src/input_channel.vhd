@@ -55,26 +55,21 @@ entity input_channel is
            clk_x5          : in  STD_LOGIC;
            serial          : in  STD_LOGIC;
            reset           : in  std_logic;
-           invalid_symbol  : out std_logic;
-           symbol          : out std_logic_vector (9 downto 0);
            ctl_valid       : out std_logic;
            ctl             : out std_logic_vector (1 downto 0);
            data_valid      : out std_logic;
-           data            : out std_logic_vector (7 downto 0);
-           symbol_sync     : out STD_LOGIC);
+           data            : out std_logic_vector (7 downto 0));
 end input_channel;
 
 architecture Behavioral of input_channel is
 
     signal delay_count     : std_logic_vector (4 downto 0);
-    signal delay_ce        : STD_LOGIC;
-    signal bitslip         : STD_LOGIC;
-    signal symbol_sync_i   : STD_LOGIC;
-    signal symbol_i        : std_logic_vector (9 downto 0);
-    signal invalid_symbol_i: STD_LOGIC;
+    signal delay_ce        : std_logic;
+    signal bitslip         : std_logic;
+    signal symbol          : std_logic_vector (9 downto 0);
+    signal invalid_symbol  : std_logic;
 
 begin
-    symbol <= symbol_i;
 
 i_deser: entity work.deserialiser_1_to_10 port map (
         clk_mgmt    => clk_mgmt,
@@ -86,26 +81,23 @@ i_deser: entity work.deserialiser_1_to_10 port map (
         clk_x5      => clk_x5,
         reset       => reset,
         serial      => serial,
-        data        => symbol_i);
+        data        => symbol);
 
 i_decoder: entity work.tmds_decoder port map (
         clk             => clk,
-        symbol          => symbol_i,
-        invalid_symbol  => invalid_symbol_i,
+        symbol          => symbol,
+        invalid_symbol  => invalid_symbol,
         ctl_valid       => ctl_valid,
         ctl             => ctl,
         data_valid      => data_valid,
         data            => data
     );
 
-    invalid_symbol <= invalid_symbol_i;
-
 i_alignment_detect: entity work.alignment_detect port map (
            clk            => clk,
-           invalid_symbol => invalid_symbol_i,
+           invalid_symbol => invalid_symbol,
            delay_count    => delay_count,
            delay_ce       => delay_ce,
-           bitslip        => bitslip,
-           symbol_sync    => symbol_sync);
+           bitslip        => bitslip);
 
 end Behavioral;

@@ -54,7 +54,6 @@ use UNISIM.VComponents.all;
 entity hdmi_input is
     Port (
         clk100      : in  std_logic;
-        clk200      : in  std_logic;
 
         clk_pixel    : in std_logic;
         clk_pixel_x1 : in std_logic;
@@ -104,14 +103,11 @@ ch0: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch0,
-        invalid_symbol  => open,
-        symbol          => open,
         ctl_valid       => ch0_ctl_valid,
         ctl             => ch0_ctl,
         data_valid      => ch0_data_valid,
         data            => ch0_data,
-        reset           => ser_reset,
-        symbol_sync     => open
+        reset           => ser_reset
     );
 
 ch1: entity work.input_channel
@@ -121,14 +117,11 @@ ch1: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch1,
-        symbol          => open,
-        invalid_symbol  => open,
         ctl_valid       => ch1_ctl_valid,
         ctl             => open,
         data_valid      => ch1_data_valid,
         data            => ch1_data,
-        reset           => ser_reset,
-        symbol_sync     => open
+        reset           => ser_reset
     );
 
 ch2: entity work.input_channel
@@ -138,14 +131,11 @@ ch2: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch2,
-        invalid_symbol  => open,
-        symbol          => open,
         ctl_valid       => ch2_ctl_valid,
         ctl             => open,
         data_valid      => ch2_data_valid,
         data            => ch2_data,
-        reset           => ser_reset,
-        symbol_sync     => open
+        reset           => ser_reset
     );
 
 hdmi_section_decode: process(clk_pixel)
