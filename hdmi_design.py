@@ -69,9 +69,7 @@ class HDMILoopback(Module):
 
         # input buffers
         hdmi_in_clk = Signal()
-        hdmi_in_data0 = Signal()
-        hdmi_in_data1 = Signal()
-        hdmi_in_data2 = Signal()
+        hdmi_in_data = Signal(3)
 
         self.specials += [
             Instance("IBUFDS",
@@ -81,22 +79,20 @@ class HDMILoopback(Module):
             Instance("IBUFDS",
                 i_I=hdmi_in_pads.data0_p,
                 i_IB=hdmi_in_pads.data0_n,
-                o_O=hdmi_in_data0),
+                o_O=hdmi_in_data[0]),
             Instance("IBUFDS",
                 i_I=hdmi_in_pads.data1_p,
                 i_IB=hdmi_in_pads.data1_n,
-                o_O=hdmi_in_data1),
+                o_O=hdmi_in_data[1]),
             Instance("IBUFDS",
                 i_I=hdmi_in_pads.data2_p,
                 i_IB=hdmi_in_pads.data2_n,
-                o_O=hdmi_in_data2),
+                o_O=hdmi_in_data[2]),
         ]
 
         # output buffers
         hdmi_out_clk = Signal()
-        hdmi_out_data0 = Signal()
-        hdmi_out_data1 = Signal()
-        hdmi_out_data2 = Signal()
+        hdmi_out_data = Signal(3)
 
         self.specials += [
             Instance("OBUFDS",
@@ -104,15 +100,15 @@ class HDMILoopback(Module):
                 o_O=hdmi_out_pads.clk_p,
                 o_OB=hdmi_out_pads.clk_n),
             Instance("OBUFDS",
-                i_I=hdmi_out_data0,
+                i_I=hdmi_out_data[0],
                 o_O=hdmi_out_pads.data0_p,
                 o_OB=hdmi_out_pads.data0_n),
             Instance("OBUFDS",
-                i_I=hdmi_out_data1,
+                i_I=hdmi_out_data[1],
                 o_O=hdmi_out_pads.data1_p,
                 o_OB=hdmi_out_pads.data1_n),
             Instance("OBUFDS",
-                i_I=hdmi_out_data2,
+                i_I=hdmi_out_data[2],
                 o_O=hdmi_out_pads.data2_p,
                 o_OB=hdmi_out_pads.data2_n),
         ]
@@ -188,6 +184,27 @@ class HDMILoopback(Module):
         self.comb += reset_timer.wait.eq(mmcm_locked)
 
         # hdmi input
+        ctl_valid = Signal(3)
+        ctl = [Signal(2) for i in range(3)]
+        data_valid = Signal(3)
+        data = [Signal(8) for i in range(3)]
+
+        for i in range(3):
+            self.specials += [
+                Instance("input_channel",
+                    i_clk_mgmt=ClockSignal(),
+                    i_clk=pix_clk,
+                    i_clk_x1=pix_clk,
+                    i_clk_x5=pix5x_clk,
+                    i_serial=hdmi_in_data[2-i], # FIXME
+                    o_ctl_valid=ctl_valid[i],
+                    o_ctl=ctl[i],
+                    o_data_valid=data_valid[i],
+                    o_data=data[i],
+                    i_reset=~reset_timer.done,
+                )
+            ]
+
         blank = Signal()
         hsync = Signal()
         vsync = Signal()
@@ -195,25 +212,23 @@ class HDMILoopback(Module):
         green = Signal(8)
         blue  = Signal(8)
 
-        self.specials += [
-            Instance("hdmi_input",
-                i_clk100=ClockSignal(),
-
-                i_clk_pixel=pix_clk,
-                i_clk_pixel_x1=pix_clk,
-                i_clk_pixel_x5=pix5x_clk,
-                i_ser_reset=~reset_timer.done,
-
-                i_hdmi_in_ch0=hdmi_in_data2,
-                i_hdmi_in_ch1=hdmi_in_data1,
-                i_hdmi_in_ch2=hdmi_in_data0,
-
-                o_raw_blank=blank,
-                o_raw_hsync=hsync,
-                o_raw_vsync=vsync,
-                o_raw_ch0=blue,
-                o_raw_ch1=green,
-                o_raw_ch2=red
+        self.clock_domains.cd_pix = ClockDomain("pix", reset_less=True)
+        self.comb += self.cd_pix.clk.eq(pix_clk)
+        self.sync.pix += [
+            If(ctl_valid[0] & ctl_valid[1] & ctl_valid[2],
+                vsync.eq(ctl[0][1]),
+                hsync.eq(ctl[0][0]),
+                blank.eq(1),
+                red.eq(0),
+                green.eq(0),
+                blue.eq(0)
+            ).Elif(data_valid[0] & data_valid[1] & data_valid[2],
+                vsync.eq(0),
+                hsync.eq(0),
+                blank.eq(0),
+                red.eq(data[2]),
+                green.eq(data[1]),
+                blue.eq(data[0])
             )
         ]
 
@@ -235,9 +250,9 @@ class HDMILoopback(Module):
                 i_vga_green=green,
 
                 o_tmds_out_clk=hdmi_out_clk,
-                o_tmds_out_ch0=hdmi_out_data0,
-                o_tmds_out_ch1=hdmi_out_data1,
-                o_tmds_out_ch2=hdmi_out_data2
+                o_tmds_out_ch0=hdmi_out_data[0],
+                o_tmds_out_ch1=hdmi_out_data[1],
+                o_tmds_out_ch2=hdmi_out_data[2]
             )
         ]
         self.comb += hdmi_out_pads.scl.eq(1)
