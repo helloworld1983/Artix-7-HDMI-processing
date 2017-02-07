@@ -157,6 +157,31 @@ class HDMILoopback(Module):
             hdmi_in_pads.txen.eq(1)
         ]
 
+        # mmcm
+        pix_clk_pll = Signal()
+        pix5x_clk_pll = Signal()
+        pix_clk = Signal()
+        pix5x_clk = Signal()
+        mmcm_fb = Signal()
+        mmcm_locked = Signal()
+        self.specials += [
+            Instance("MMCME2_ADV",
+                p_BANDWIDTH="OPTIMIZED", i_RST=0, o_LOCKED=mmcm_locked,
+
+                # VCO
+                p_REF_JITTER1=0.01, p_CLKIN1_PERIOD=6.7,
+                p_CLKFBOUT_MULT_F=5.0, p_CLKFBOUT_PHASE=0.000, p_DIVCLK_DIVIDE=1,
+                i_CLKIN1=hdmi_in_clk, i_CLKFBIN=mmcm_fb, o_CLKFBOUT=mmcm_fb,
+
+                # CLK0
+                p_CLKOUT0_DIVIDE_F=5.0, p_CLKOUT0_PHASE=0.000, o_CLKOUT0=pix_clk_pll,
+                # CLK1
+                p_CLKOUT1_DIVIDE=1, p_CLKOUT1_PHASE=0.000, o_CLKOUT1=pix5x_clk_pll
+            ),
+            Instance("BUFG", i_I=pix_clk_pll, o_O=pix_clk),
+            Instance("BUFIO", i_I=pix5x_clk_pll, o_O=pix5x_clk),
+        ]
+
         # hdmi input
         blank = Signal()
         hsync = Signal()
@@ -165,20 +190,16 @@ class HDMILoopback(Module):
         green = Signal(8)
         blue  = Signal(8)
 
-        pixel_clk = Signal()
-        pixel_io_clk_x1 = Signal()
-        pixel_io_clk_x5 = Signal()
-
         self.specials += [
             Instance("hdmi_input",
                 i_clk100=ClockSignal(),
                 i_clk200=ClockSignal("clk200"),
 
-                o_pixel_clk=pixel_clk,
-                o_pixel_io_clk_x1=pixel_io_clk_x1,
-                o_pixel_io_clk_x5=pixel_io_clk_x5,
+                i_clk_pixel=pix_clk,
+                i_clk_pixel_x1=pix_clk,
+                i_clk_pixel_x5=pix5x_clk,
+                i_clk_locked=mmcm_locked,
 
-                i_hdmi_in_clk=hdmi_in_clk,
                 i_hdmi_in_ch0=hdmi_in_data2,
                 i_hdmi_in_ch1=hdmi_in_data1,
                 i_hdmi_in_ch2=hdmi_in_data0,
@@ -193,14 +214,13 @@ class HDMILoopback(Module):
         ]
 
         platform.add_source_dir("./input_src/")
-        platform.add_period_constraint(hdmi_in_pads.clk_p, 6.7)
 
         # hdmi output
         self.specials += [
             Instance("hdmi_output",
-                i_pixel_clk=pixel_clk,
-                i_pixel_io_clk_x1=pixel_io_clk_x1,
-                i_pixel_io_clk_x5=pixel_io_clk_x5,
+                i_pixel_clk=pix_clk,
+                i_pixel_io_clk_x1=pix_clk,
+                i_pixel_io_clk_x5=pix5x_clk,
 
                 i_data_valid=1,
                 i_vga_blank=blank,
