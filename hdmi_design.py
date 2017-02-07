@@ -12,6 +12,7 @@ from litex.boards.platforms import nexys_video
 from litex.soc.integration.builder import *
 
 from litevideo.input.edid import EDID
+from litevideo.input.decoding import Decoding
 
 
 class _CRG(Module):
@@ -63,8 +64,6 @@ class _CRG(Module):
 class HDMIInputChannel(Module):
     def __init__(self, data):
         self.reset = Signal()
-        self.pix_clk = Signal()
-        self.pix5x_clk = Signal()
 
         self.ctl_valid = Signal()
         self.ctl = Signal(2)
@@ -86,25 +85,21 @@ class HDMIInputChannel(Module):
                 i_clk_mgmt=ClockSignal(),
                 i_delay_ce=delay_ce,
                 i_delay_count=delay_count,
-                i_clk=self.pix_clk,
-                i_clk_x1=self.pix_clk,
-                i_clk_x5=self.pix5x_clk,
+                i_clk=ClockSignal("pix"),
+                i_clk_x1=ClockSignal("pix"),
+                i_clk_x5=ClockSignal("pix5x"),
                 i_bitslip=bitslip,
                 i_reset=self.reset,
                 i_serial=data,
                 o_data=symbol
             ),
             Instance("tmds_decoder",
-                i_clk=self.pix_clk,
+                i_clk=ClockSignal("pix"),
                 i_symbol=symbol,
-                o_invalid_symbol=invalid_symbol,
-                o_ctl_valid=self.ctl_valid,
-                o_ctl=self.ctl,
-                o_data_valid=self.data_valid,
-                o_data=self.data
+                o_invalid_symbol=invalid_symbol
             ),
             Instance("alignment_detect",
-                i_clk=self.pix_clk,
+                i_clk=ClockSignal("pix"),
                 i_invalid_symbol=invalid_symbol,
                 o_delay_count=delay_count,
                 o_delay_ce=delay_ce,
@@ -112,6 +107,22 @@ class HDMIInputChannel(Module):
             )
         ]
 
+        decoder = Decoding()
+        self.submodules += decoder
+        self.comb += [
+            decoder.valid_i.eq(1),
+            decoder.input.eq(symbol),
+
+            If(decoder.valid_o,
+                If(decoder.output.de,
+                    self.data_valid.eq(1),
+                    self.data.eq(decoder.output.d)
+                ).Else(
+                    self.ctl_valid.eq(1),
+                    self.ctl.eq(decoder.output.c)
+                )
+            )
+        ]
 
 class HDMILoopback(Module):
     def __init__(self, platform):
@@ -232,6 +243,11 @@ class HDMILoopback(Module):
             Instance("BUFIO", i_I=pix5x_clk_pll, o_O=pix5x_clk),
         ]
 
+        self.clock_domains.cd_pix = ClockDomain("pix", reset_less=True)
+        self.clock_domains.cd_pix5x = ClockDomain("pix5x", reset_less=True)
+        self.comb += self.cd_pix.clk.eq(pix_clk)
+        self.comb += self.cd_pix5x.clk.eq(pix5x_clk)
+
         reset_timer = WaitTimer(256)
         self.submodules += reset_timer
         self.comb += reset_timer.wait.eq(mmcm_locked)
@@ -247,8 +263,6 @@ class HDMILoopback(Module):
             self.submodules += chan
             self.comb += [
                 chan.reset.eq(~reset_timer.done),
-                chan.pix_clk.eq(pix_clk),
-                chan.pix5x_clk.eq(pix5x_clk),
                 ctl_valid[i].eq(chan.ctl_valid),
                 ctl[i].eq(chan.ctl),
                 data_valid[i].eq(chan.data_valid),
@@ -262,8 +276,6 @@ class HDMILoopback(Module):
         green = Signal(8)
         blue  = Signal(8)
 
-        self.clock_domains.cd_pix = ClockDomain("pix", reset_less=True)
-        self.comb += self.cd_pix.clk.eq(pix_clk)
         self.sync.pix += [
             If(ctl_valid[0] & ctl_valid[1] & ctl_valid[2],
                 vsync.eq(ctl[0][1]),
@@ -287,9 +299,9 @@ class HDMILoopback(Module):
         # hdmi output
         self.specials += [
             Instance("hdmi_output",
-                i_pixel_clk=pix_clk,
-                i_pixel_io_clk_x1=pix_clk,
-                i_pixel_io_clk_x5=pix5x_clk,
+                i_pixel_clk=ClockSignal("pix"),
+                i_pixel_io_clk_x1=ClockSignal("pix"),
+                i_pixel_io_clk_x5=ClockSignal("pix5x"),
 
                 i_data_valid=1,
                 i_vga_blank=blank,

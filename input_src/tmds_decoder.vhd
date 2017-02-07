@@ -54,13 +54,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity TMDS_decoder is
     Port ( clk              : in  std_logic;
            symbol           : in  std_logic_vector (9 downto 0);
-           invalid_symbol   : out std_logic;
-
-           ctl_valid        : out std_logic;
-           ctl              : out std_logic_vector (1 downto 0);
-
-           data_valid       : out std_logic;
-           data             : out std_logic_vector (7 downto 0));
+           invalid_symbol   : out std_logic);
 end TMDS_decoder;
 
 architecture Behavioral of TMDS_decoder is
@@ -70,24 +64,6 @@ begin
 decode_ctl:  process(clk)
    begin
       if rising_edge(clk) then
-            ------------------
-            -- TMDS data bytes
-            if lookup(8) = '1' then
-                data_valid <= '1';
-                data       <= lookup(7 downto 0);
-            else
-                data_valid <= '0';
-            end if;
-
-            ------------
-            -- CTL codes
-            if lookup(8 downto 7) = "01" then
-                ctl_valid <= '1';
-                ctl       <= lookup(1 downto 0);
-            else
-                ctl_valid <= '0';
-            end if;
-
             ------------------------------
             -- All other codes are invalid
             ------------------------------
