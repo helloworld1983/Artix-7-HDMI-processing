@@ -59,9 +59,6 @@ entity TMDS_decoder is
            ctl_valid        : out std_logic;
            ctl              : out std_logic_vector (1 downto 0);
 
-           terc4_valid      : out std_logic;
-           terc4            : out std_logic_vector (3 downto 0);
-
            guardband_valid  : out std_logic;
            guardband        : out std_logic_vector (0 downto 0);
 
@@ -103,7 +100,6 @@ decode_ctl:  process(clk)
                 invalid_symbol <= '0';
             end if;
 
-            terc4_valid     <= '0';
             guardband_valid <= '0';
             if lookup(8) = '1' then
                 -------------------------
@@ -115,28 +111,6 @@ decode_ctl:  process(clk)
                     when others => null;
                 end case;
 
-                -------------------------
-                -- Decode TERC4 data
-                -------------------------
-                case lookup(7 downto 0) is
-                    when x"5B"  => terc4_valid <= '1'; terc4 <= "0000";-- "1010011100" TERC4 0000
-                    when x"5A"  => terc4_valid <= '1'; terc4 <= "0001"; -- "1001100011" TERC4 0001
-                    when x"D3"  => terc4_valid <= '1'; terc4 <= "0010"; -- "1011100100" TERC4 0010
-                    when x"D9"  => terc4_valid <= '1'; terc4 <= "0011"; -- "1011100010" TERC4 0011
-                    when x"93"  => terc4_valid <= '1'; terc4 <= "0100"; -- "0101110001" TERC4 0100
-                    when x"22"  => terc4_valid <= '1'; terc4 <= "0101"; -- "0100011110" TERC4 0101
-                    when x"92"  => terc4_valid <= '1'; terc4 <= "0110"; -- "0110001110" TERC4 0110
-                    when x"44"  => terc4_valid <= '1'; terc4 <= "0111"; -- "0100111100" TERC4 0111
-                    when x"AB"  => terc4_valid <= '1'; terc4 <= "1000"; -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2)
-                    when x"4B"  => terc4_valid <= '1'; terc4 <= "1001"; -- "0100111001" TERC4 1001
-                    when x"A4"  => terc4_valid <= '1'; terc4 <= "1010"; -- "0110011100" TERC4 1010
-                    when x"B5"  => terc4_valid <= '1'; terc4 <= "1011"; -- "1011000110" TERC4 1011
-                    when x"6D"  => terc4_valid <= '1'; terc4 <= "1100"; -- "1010001110" TERC4 1100
-                    when x"6C"  => terc4_valid <= '1'; terc4 <= "1101"; -- "1001110001" TERC4 1101
-                    when x"A5"  => terc4_valid <= '1'; terc4 <= "1110"; -- "0101100011" TERC4 1110
-                    when x"BA"  => terc4_valid <= '1'; terc4 <= "1111"; -- "1011000011" TERC4 1111
-                    when others => null;
-                end case;
             end if;
 
             -------------------------------------------------------------
@@ -894,22 +868,3 @@ decode_ctl:  process(clk)
         end if;
     end process;
 end Behavioral;
-
--- For Guard band and TERC4 decoding (to be done later!)
--- when x"55" => -- "0100110011" HDMI Guard band (video C1, data C1 & C2)
--- when x"5B" => -- "1010011100" TERC4 0000
--- when x"5A" => -- "1001100011" TERC4 0001
--- when x"D3" => -- "1011100100" TERC4 0010
--- when x"D9" => -- "1011100010" TERC4 0011
--- when x"93" => -- "0101110001" TERC4 0100
--- when x"22" => -- "0100011110" TERC4 0101
--- when x"92" => -- "0110001110" TERC4 0110
--- when x"44" => -- "0100111100" TERC4 0111
--- when x"AB" => -- "1011001100" TERC4 1000 & HDMI Guard band (video C0 and Video C2)
--- when x"4B" => -- "0100111001" TERC4 1001
--- when x"A4" => -- "0110011100" TERC4 1010
--- when x"B5" => -- "1011000110" TERC4 1011
--- when x"6D" => -- "1010001110" TERC4 1100
--- when x"6C" => -- "1001110001" TERC4 1101
--- when x"A5" => -- "0101100011" TERC4 1110
--- when x"BA" => -- "1011000011" TERC4 1111

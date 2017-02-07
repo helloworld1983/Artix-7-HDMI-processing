@@ -107,8 +107,6 @@ architecture Behavioral of hdmi_input is
     signal ch0_invalid_symbol  : std_logic;
     signal ch0_ctl_valid       : std_logic;
     signal ch0_ctl             : std_logic_vector(1 downto 0);
-    signal ch0_terc4_valid     : std_logic;
-    signal ch0_terc4           : std_logic_vector (3 downto 0);
     signal ch0_data_valid      : std_logic;
     signal ch0_data            : std_logic_vector(7 downto 0);
     signal ch0_guardband_valid : std_logic;
@@ -121,8 +119,6 @@ architecture Behavioral of hdmi_input is
     signal ch1_invalid_symbol  : std_logic;
     signal ch1_ctl_valid       : std_logic;
     signal ch1_ctl             : std_logic_vector(1 downto 0);
-    signal ch1_terc4_valid     : std_logic;
-    signal ch1_terc4           : std_logic_vector (3 downto 0);
     signal ch1_data_valid      : std_logic;
     signal ch1_data            : std_logic_vector(7 downto 0);
     signal ch1_guardband_valid : std_logic;
@@ -135,8 +131,6 @@ architecture Behavioral of hdmi_input is
     signal ch2_invalid_symbol  : std_logic;
     signal ch2_ctl_valid       : std_logic;
     signal ch2_ctl             : std_logic_vector(1 downto 0);
-    signal ch2_terc4_valid     : std_logic;
-    signal ch2_terc4           : std_logic_vector (3 downto 0);
     signal ch2_data_valid      : std_logic;
     signal ch2_data            : std_logic_vector(7 downto 0);
     signal ch2_guardband_valid : std_logic;
@@ -237,8 +231,6 @@ ch0: entity work.input_channel
         symbol          => ch0_symbol,
         ctl_valid       => ch0_ctl_valid,
         ctl             => ch0_ctl,
-        terc4_valid     => ch0_terc4_valid,
-        terc4           => ch0_terc4,
         guardband_valid => ch0_guardband_valid,
         guardband       => ch0_guardband,
         data_valid      => ch0_data_valid,
@@ -259,8 +251,6 @@ ch1: entity work.input_channel
         invalid_symbol  => ch1_invalid_symbol,
         ctl_valid       => ch1_ctl_valid,
         ctl             => ch1_ctl,
-        terc4_valid     => ch1_terc4_valid,
-        terc4           => ch1_terc4,
         guardband_valid => ch1_guardband_valid,
         guardband       => ch1_guardband,
         data_valid      => ch1_data_valid,
@@ -281,8 +271,6 @@ ch2: entity work.input_channel
         symbol          => ch2_symbol,
         ctl_valid       => ch2_ctl_valid,
         ctl             => ch2_ctl,
-        terc4_valid     => ch2_terc4_valid,
-        terc4           => ch2_terc4,
         guardband_valid => ch2_guardband_valid,
         guardband       => ch2_guardband,
         data_valid      => ch2_data_valid,
