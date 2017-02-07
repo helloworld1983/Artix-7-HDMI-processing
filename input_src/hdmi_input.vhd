@@ -59,7 +59,7 @@ entity hdmi_input is
         clk_pixel    : in std_logic;
         clk_pixel_x1 : in std_logic;
         clk_pixel_x5 : in std_logic;
-        clk_locked   : in std_logic;
+        ser_reset    : in std_logic;
 
         -- HDMI input signals
         hdmi_in_ch0   : in    std_logic;
@@ -78,8 +78,6 @@ end hdmi_input;
 
 architecture Behavioral of hdmi_input is
 
-    signal ser_reset         : std_logic;
-
     -------------------------------------------------------------
     -- For the decoded TMDS data
     -------------------------------------------------------------
@@ -96,32 +94,7 @@ architecture Behavioral of hdmi_input is
     signal ch2_data_valid      : std_logic;
     signal ch2_data            : std_logic_vector(7 downto 0);
 
-    signal reset_counter  : unsigned(7 downto 0) := (others => '1');
-
 begin
-
-------------------------------------------
--- Reset the receivers if PLL lock is lost
-------------------------------------------
-reset_proc: process(clk100)
-    begin
-        if rising_edge(clk100) then
-            if clk_locked = '1' then
-                if reset_counter > 0 then
-                    reset_counter <= reset_counter-1;
-                end if;
-            else
-                reset_counter <= (others => '1');
-            end if;
-        end if;
-    end process;
-
-reset_proc2: process(clk_pixel)
-    begin
-        if rising_edge(clk_pixel) then
-            ser_reset <= reset_counter(reset_counter'high);
-        end if;
-    end process;
 
 
 ch0: entity work.input_channel

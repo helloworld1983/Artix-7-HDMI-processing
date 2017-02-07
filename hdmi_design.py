@@ -5,6 +5,7 @@ import os
 from litex.gen import *
 from litex.gen.genlib.resetsync import AsyncResetSynchronizer
 from litex.gen.fhdl.specials import Tristate
+from litex.gen.genlib.misc import WaitTimer
 
 from litex.boards.platforms import nexys_video
 
@@ -182,6 +183,10 @@ class HDMILoopback(Module):
             Instance("BUFIO", i_I=pix5x_clk_pll, o_O=pix5x_clk),
         ]
 
+        reset_timer = WaitTimer(256)
+        self.submodules += reset_timer
+        self.comb += reset_timer.wait.eq(mmcm_locked)
+
         # hdmi input
         blank = Signal()
         hsync = Signal()
@@ -198,7 +203,7 @@ class HDMILoopback(Module):
                 i_clk_pixel=pix_clk,
                 i_clk_pixel_x1=pix_clk,
                 i_clk_pixel_x5=pix5x_clk,
-                i_clk_locked=mmcm_locked,
+                i_ser_reset=~reset_timer.done,
 
                 i_hdmi_in_ch0=hdmi_in_data2,
                 i_hdmi_in_ch1=hdmi_in_data1,
