@@ -66,10 +66,6 @@ entity hdmi_input is
         hdmi_in_ch1   : in    std_logic;
         hdmi_in_ch2   : in    std_logic;
 
-        -- Status
-        pll_locked   : out std_logic;
-        symbol_sync  : out std_logic;
-
         -- Raw data signals
         raw_blank : out std_logic;
         raw_hsync : out std_logic;
@@ -91,58 +87,30 @@ architecture Behavioral of hdmi_input is
     signal clk_pixel_x5_raw  : std_logic;
     signal clkfb_2           : std_logic;
     signal locked            : std_logic;
-    signal reset             : std_logic;
     signal ser_reset         : std_logic;
     signal ser_ce            : std_logic;
-    -------------------------------------------------------------
-    -- The raw 10-bit received symbols
-    -------------------------------------------------------------
-    signal ch0_symbol  : std_logic_vector(9 downto 0);
-    signal ch1_symbol  : std_logic_vector(9 downto 0);
-    signal ch2_symbol  : std_logic_vector(9 downto 0);
 
     -------------------------------------------------------------
     -- For the decoded TMDS data
     -------------------------------------------------------------
-    signal ch0_invalid_symbol  : std_logic;
     signal ch0_ctl_valid       : std_logic;
     signal ch0_ctl             : std_logic_vector(1 downto 0);
     signal ch0_data_valid      : std_logic;
     signal ch0_data            : std_logic_vector(7 downto 0);
-    signal ch0_delay_count     : std_logic_vector (4 downto 0);
-    signal ch0_delay_ce        : STD_LOGIC;
-    signal ch0_bitslip         : STD_LOGIC;
-    signal ch0_symbol_sync     : STD_LOGIC;
 
-    signal ch1_invalid_symbol  : std_logic;
     signal ch1_ctl_valid       : std_logic;
     signal ch1_ctl             : std_logic_vector(1 downto 0);
     signal ch1_data_valid      : std_logic;
     signal ch1_data            : std_logic_vector(7 downto 0);
-    signal ch1_delay_count     : std_logic_vector (4 downto 0);
-    signal ch1_delay_ce        : STD_LOGIC;
-    signal ch1_bitslip         : STD_LOGIC;
-    signal ch1_symbol_sync     : STD_LOGIC;
 
-    signal ch2_invalid_symbol  : std_logic;
     signal ch2_ctl_valid       : std_logic;
     signal ch2_ctl             : std_logic_vector(1 downto 0);
     signal ch2_data_valid      : std_logic;
     signal ch2_data            : std_logic_vector(7 downto 0);
-    signal ch2_delay_count     : std_logic_vector (4 downto 0);
-    signal ch2_delay_ce        : STD_LOGIC;
-    signal ch2_bitslip         : STD_LOGIC;
-    signal ch2_symbol_sync     : STD_LOGIC;
 
     signal reset_counter  : unsigned(7 downto 0) := (others => '1');
 
-    signal last_was_ctl         : std_logic := '0';
-
-    signal in_dvid              : std_logic := '0';
 begin
-    pll_locked  <= locked;
-    reset       <= std_logic(reset_counter(reset_counter'high));
-
    --------------------------------
    -- MMCM driven by the HDMI clock
    --------------------------------
@@ -221,14 +189,14 @@ ch0: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch0,
-        invalid_symbol  => ch0_invalid_symbol,
-        symbol          => ch0_symbol,
+        invalid_symbol  => open,
+        symbol          => open,
         ctl_valid       => ch0_ctl_valid,
         ctl             => ch0_ctl,
         data_valid      => ch0_data_valid,
         data            => ch0_data,
         reset           => ser_reset,
-        symbol_sync     => ch0_symbol_sync
+        symbol_sync     => open
     );
 
 ch1: entity work.input_channel
@@ -239,14 +207,14 @@ ch1: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch1,
-        symbol          => ch1_symbol,
-        invalid_symbol  => ch1_invalid_symbol,
+        symbol          => open,
+        invalid_symbol  => open,
         ctl_valid       => ch1_ctl_valid,
         ctl             => ch1_ctl,
         data_valid      => ch1_data_valid,
         data            => ch1_data,
         reset           => ser_reset,
-        symbol_sync     => ch1_symbol_sync
+        symbol_sync     => open
     );
 
 ch2: entity work.input_channel
@@ -257,56 +225,34 @@ ch2: entity work.input_channel
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch2,
-        invalid_symbol  => ch2_invalid_symbol,
-        symbol          => ch2_symbol,
+        invalid_symbol  => open,
+        symbol          => open,
         ctl_valid       => ch2_ctl_valid,
         ctl             => ch2_ctl,
         data_valid      => ch2_data_valid,
         data            => ch2_data,
         reset           => ser_reset,
-        symbol_sync     => ch2_symbol_sync
+        symbol_sync     => open
     );
-
-    symbol_sync <= ch0_symbol_sync and ch1_symbol_sync and ch2_symbol_sync;
 
 hdmi_section_decode: process(clk_pixel)
     begin
         if rising_edge(clk_pixel) then
-            -------------------------------------------------------------------
-            -- Output the values depending on what sort of data block we are in
-            -------------------------------------------------------------------
             if ch0_ctl_valid = '1' and ch1_ctl_valid = '1' and ch2_ctl_valid = '1' then
-                -------------------------------------------------------------------
-                -- As soon as we see avalid CTL symbols we are no longer in the
-                -- video or aux data period it doesn't have any trailing guard band
-                -------------------------------------------------------------------
-                in_dvid   <= '0';
                 raw_vsync <= ch0_ctl(1);
                 raw_hsync <= ch0_ctl(0);
                 raw_blank <= '1';
                 raw_ch2   <= (others => '0');
                 raw_ch1   <= (others => '0');
                 raw_ch0   <= (others => '0');
-                last_was_ctl   <= '1';
-            else
-                last_was_ctl <= '0';
-                if in_dvid = '1' then
-                    -- In the Video data period
-                    raw_vsync <= '0';
-                    raw_hsync <= '0';
-                    raw_blank <= '0';
-                    raw_ch2   <= ch2_data;
-                    raw_ch1   <= ch1_data;
-                    raw_ch0   <= ch0_data;
-                end if;
+            elsif ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1' then
+                raw_vsync <= '0';
+                raw_hsync <= '0';
+                raw_blank <= '0';
+                raw_ch2   <= ch2_data;
+                raw_ch1   <= ch1_data;
+                raw_ch0   <= ch0_data;
             end if;
-            --------------------------------
-            -- Is this some DVID video data?
-            --------------------------------
-            if last_was_ctl = '1' and ch0_data_valid = '1' and ch1_data_valid = '1' and ch2_data_valid = '1' then
-                in_dvid <= '1';
-            end if;
-
         end if;
     end process;
 
@@ -333,4 +279,5 @@ reset_proc2: process(clk_pixel)
             ser_ce    <= not ser_reset;
         end if;
     end process;
+
 end Behavioral;
