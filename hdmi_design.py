@@ -259,7 +259,7 @@ class HDMILoopback(Module):
         data = [Signal(8) for i in range(3)]
 
         for i in range(3):
-            chan = HDMIInputChannel(hdmi_in_data[2-i]) # FIXME
+            chan = HDMIInputChannel(hdmi_in_data[i])
             self.submodules += chan
             self.comb += [
                 chan.reset.eq(~reset_timer.done),
