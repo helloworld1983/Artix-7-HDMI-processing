@@ -60,8 +60,6 @@ entity input_channel is
            symbol          : out std_logic_vector (9 downto 0);
            ctl_valid       : out std_logic;
            ctl             : out std_logic_vector (1 downto 0);
-           guardband_valid : out std_logic;
-           guardband       : out std_logic_vector (0 downto 0);
            data_valid      : out std_logic;
            data            : out std_logic_vector (7 downto 0);
            symbol_sync     : out STD_LOGIC);
@@ -98,8 +96,6 @@ i_decoder: entity work.tmds_decoder port map (
         invalid_symbol  => invalid_symbol_i,
         ctl_valid       => ctl_valid,
         ctl             => ctl,
-        guardband_valid => guardband_valid,
-        guardband       => guardband,
         data_valid      => data_valid,
         data            => data
     );

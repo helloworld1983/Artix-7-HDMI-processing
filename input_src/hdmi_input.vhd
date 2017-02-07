@@ -109,8 +109,6 @@ architecture Behavioral of hdmi_input is
     signal ch0_ctl             : std_logic_vector(1 downto 0);
     signal ch0_data_valid      : std_logic;
     signal ch0_data            : std_logic_vector(7 downto 0);
-    signal ch0_guardband_valid : std_logic;
-    signal ch0_guardband       : std_logic_vector (0 downto 0);
     signal ch0_delay_count     : std_logic_vector (4 downto 0);
     signal ch0_delay_ce        : STD_LOGIC;
     signal ch0_bitslip         : STD_LOGIC;
@@ -121,8 +119,6 @@ architecture Behavioral of hdmi_input is
     signal ch1_ctl             : std_logic_vector(1 downto 0);
     signal ch1_data_valid      : std_logic;
     signal ch1_data            : std_logic_vector(7 downto 0);
-    signal ch1_guardband_valid : std_logic;
-    signal ch1_guardband       : std_logic_vector (0 downto 0);
     signal ch1_delay_count     : std_logic_vector (4 downto 0);
     signal ch1_delay_ce        : STD_LOGIC;
     signal ch1_bitslip         : STD_LOGIC;
@@ -133,8 +129,6 @@ architecture Behavioral of hdmi_input is
     signal ch2_ctl             : std_logic_vector(1 downto 0);
     signal ch2_data_valid      : std_logic;
     signal ch2_data            : std_logic_vector(7 downto 0);
-    signal ch2_guardband_valid : std_logic;
-    signal ch2_guardband       : std_logic_vector (0 downto 0);
     signal ch2_delay_count     : std_logic_vector (4 downto 0);
     signal ch2_delay_ce        : STD_LOGIC;
     signal ch2_bitslip         : STD_LOGIC;
@@ -231,8 +225,6 @@ ch0: entity work.input_channel
         symbol          => ch0_symbol,
         ctl_valid       => ch0_ctl_valid,
         ctl             => ch0_ctl,
-        guardband_valid => ch0_guardband_valid,
-        guardband       => ch0_guardband,
         data_valid      => ch0_data_valid,
         data            => ch0_data,
         reset           => ser_reset,
@@ -251,8 +243,6 @@ ch1: entity work.input_channel
         invalid_symbol  => ch1_invalid_symbol,
         ctl_valid       => ch1_ctl_valid,
         ctl             => ch1_ctl,
-        guardband_valid => ch1_guardband_valid,
-        guardband       => ch1_guardband,
         data_valid      => ch1_data_valid,
         data            => ch1_data,
         reset           => ser_reset,
@@ -271,8 +261,6 @@ ch2: entity work.input_channel
         symbol          => ch2_symbol,
         ctl_valid       => ch2_ctl_valid,
         ctl             => ch2_ctl,
-        guardband_valid => ch2_guardband_valid,
-        guardband       => ch2_guardband,
         data_valid      => ch2_data_valid,
         data            => ch2_data,
         reset           => ser_reset,

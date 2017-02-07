@@ -59,9 +59,6 @@ entity TMDS_decoder is
            ctl_valid        : out std_logic;
            ctl              : out std_logic_vector (1 downto 0);
 
-           guardband_valid  : out std_logic;
-           guardband        : out std_logic_vector (0 downto 0);
-
            data_valid       : out std_logic;
            data             : out std_logic_vector (7 downto 0));
 end TMDS_decoder;
@@ -98,19 +95,6 @@ decode_ctl:  process(clk)
                 invalid_symbol <= '1';
             else
                 invalid_symbol <= '0';
-            end if;
-
-            guardband_valid <= '0';
-            if lookup(8) = '1' then
-                -------------------------
-                -- Decode the guard bands
-                -------------------------
-                case lookup(7 downto 0) is
-                    when x"55"  => guardband_valid <= '1'; guardband <= "0";
-                    when x"AB"  => guardband_valid <= '1'; guardband <= "1";
-                    when others => null;
-                end case;
-
             end if;
 
             -------------------------------------------------------------
