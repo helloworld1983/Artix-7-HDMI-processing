@@ -60,6 +60,59 @@ class _CRG(Module):
         self.specials += Instance("IDELAYCTRL", i_REFCLK=ClockSignal("clk200"), i_RST=ic_reset)
 
 
+class HDMIInputChannel(Module):
+    def __init__(self, data):
+        self.reset = Signal()
+        self.pix_clk = Signal()
+        self.pix5x_clk = Signal()
+
+        self.ctl_valid = Signal()
+        self.ctl = Signal(2)
+
+        self.data_valid = Signal()
+        self.data = Signal(8)
+
+        # # #
+
+        delay_ce = Signal()
+        delay_count = Signal(5)
+        bitslip = Signal()
+
+        symbol = Signal(10)
+        invalid_symbol = Signal()
+
+        self.specials += [
+            Instance("deserialiser_1_to_10",
+                i_clk_mgmt=ClockSignal(),
+                i_delay_ce=delay_ce,
+                i_delay_count=delay_count,
+                i_clk=self.pix_clk,
+                i_clk_x1=self.pix_clk,
+                i_clk_x5=self.pix5x_clk,
+                i_bitslip=bitslip,
+                i_reset=self.reset,
+                i_serial=data,
+                o_data=symbol
+            ),
+            Instance("tmds_decoder",
+                i_clk=self.pix_clk,
+                i_symbol=symbol,
+                o_invalid_symbol=invalid_symbol,
+                o_ctl_valid=self.ctl_valid,
+                o_ctl=self.ctl,
+                o_data_valid=self.data_valid,
+                o_data=self.data
+            ),
+            Instance("alignment_detect",
+                i_clk=self.pix_clk,
+                i_invalid_symbol=invalid_symbol,
+                o_delay_count=delay_count,
+                o_delay_ce=delay_ce,
+                o_bitslip=bitslip
+            )
+        ]
+
+
 class HDMILoopback(Module):
     def __init__(self, platform):
         self.submodules.crg = _CRG(platform)
@@ -190,19 +243,16 @@ class HDMILoopback(Module):
         data = [Signal(8) for i in range(3)]
 
         for i in range(3):
-            self.specials += [
-                Instance("input_channel",
-                    i_clk_mgmt=ClockSignal(),
-                    i_clk=pix_clk,
-                    i_clk_x1=pix_clk,
-                    i_clk_x5=pix5x_clk,
-                    i_serial=hdmi_in_data[2-i], # FIXME
-                    o_ctl_valid=ctl_valid[i],
-                    o_ctl=ctl[i],
-                    o_data_valid=data_valid[i],
-                    o_data=data[i],
-                    i_reset=~reset_timer.done,
-                )
+            chan = HDMIInputChannel(hdmi_in_data[2-i]) # FIXME
+            self.submodules += chan
+            self.comb += [
+                chan.reset.eq(~reset_timer.done),
+                chan.pix_clk.eq(pix_clk),
+                chan.pix5x_clk.eq(pix5x_clk),
+                ctl_valid[i].eq(chan.ctl_valid),
+                ctl[i].eq(chan.ctl),
+                data_valid[i].eq(chan.data_valid),
+                data[i].eq(chan.data)
             ]
 
         blank = Signal()
