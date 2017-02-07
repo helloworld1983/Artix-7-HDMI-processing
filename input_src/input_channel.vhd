@@ -55,7 +55,6 @@ entity input_channel is
            clk_x5          : in  STD_LOGIC;
            serial          : in  STD_LOGIC;
            reset           : in  std_logic;
-           ce              : in  STD_LOGIC;
            invalid_symbol  : out std_logic;
            symbol          : out std_logic_vector (9 downto 0);
            ctl_valid       : out std_logic;
@@ -81,7 +80,6 @@ i_deser: entity work.deserialiser_1_to_10 port map (
         clk_mgmt    => clk_mgmt,
         delay_ce    => delay_ce,
         delay_count => delay_count,
-        ce          => ce,
         clk         => clk,
         clk_x1      => clk_x1,
         bitslip     => bitslip,

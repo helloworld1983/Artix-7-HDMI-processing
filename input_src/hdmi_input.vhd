@@ -79,7 +79,6 @@ end hdmi_input;
 architecture Behavioral of hdmi_input is
 
     signal ser_reset         : std_logic;
-    signal ser_ce            : std_logic;
 
     -------------------------------------------------------------
     -- For the decoded TMDS data
@@ -121,7 +120,6 @@ reset_proc2: process(clk_pixel)
     begin
         if rising_edge(clk_pixel) then
             ser_reset <= reset_counter(reset_counter'high);
-            ser_ce    <= not ser_reset;
         end if;
     end process;
 
@@ -130,7 +128,6 @@ ch0: entity work.input_channel
     port map (
         clk_mgmt        => clk100,
         clk             => clk_pixel,
-        ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch0,
@@ -148,7 +145,6 @@ ch1: entity work.input_channel
     port map (
         clk_mgmt        => clk100,
         clk             => clk_pixel,
-        ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch1,
@@ -166,7 +162,6 @@ ch2: entity work.input_channel
     port map (
         clk_mgmt        => clk100,
         clk             => clk_pixel,
-        ce              => ser_ce,
         clk_x1          => clk_pixel_x1,
         clk_x5          => clk_pixel_x5,
         serial          => hdmi_in_ch2,
