@@ -1,0 +1,7 @@
+Artix 7 HDMI input VHDL --> LiteX
+
+In this repository we are converting VHDL code from https://github.com/hamsternz/Artix-7-HDMI-processing to LiteX code.
+
+The aim for this is to add HDMI input on Artix7 to LiteVideo. We are converting code and reusing our modules progressively. (each step is tested on hardware to be sure it's still working) The interesting part here for us (comparing to what we already have for spartan6) is the 1 to 10 deserializer.
+
+Original code is Copyright (c) 2015 Michael Alan Field
