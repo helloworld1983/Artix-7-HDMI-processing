@@ -222,16 +222,84 @@ class AlignmentDetector(Module):
                         self.bitslip.eq(1)
                     ),
                     self.delay_count.eq(self.delay_count+1),
-                	self.delay_ce.eq(1),
-                	signal_quality[24:28].eq(0x4)
+                    self.delay_ce.eq(1),
+                    signal_quality[24:28].eq(0x4)
                 ).Else(
-                	signal_quality.eq(signal_quality + 0x100000)
+                    signal_quality.eq(signal_quality + 0x100000)
                 )
             ).Else(
                 If(signal_quality[24:28] != 0,
                     signal_quality.eq(signal_quality-1)
                 )
             )
+        ]
+
+class Deserialiser1to10(Module):
+    def __init__(self):
+        self.delay_ce = Signal()
+        self.delay_count = Signal(5)
+        self.bitslip = Signal()
+
+        self.serial = Signal()
+        self.reset = Signal()
+        self.data = Signal(10)
+
+        # # #
+
+        delayed = Signal()
+        shift1 = Signal()
+        shift2 = Signal()
+
+        self.specials += [
+            Instance("IDELAYE2",
+                p_DELAY_SRC="DATAIN", p_SIGNAL_PATTERN="DATA",
+                p_CINVCTRL_SEL="FALSE", p_HIGH_PERFORMANCE_MODE="TRUE", p_REFCLK_FREQUENCY=200.0,
+                p_PIPE_SEL="FALSE", p_IDELAY_TYPE="VAR_LOAD", p_IDELAY_VALUE=0,
+
+                i_C=ClockSignal("pix"),
+                i_LD=1,
+                i_CE=self.delay_ce,
+                i_LDPIPEEN=0, i_INC=0,
+                i_CINVCTRL=0, i_CNTVALUEIN=self.delay_count,
+
+                i_DATAIN=self.serial, o_DATAOUT=delayed
+            ),
+            Instance("ISERDESE2",
+                p_DATA_WIDTH=10, p_DATA_RATE="DDR",
+                p_SERDES_MODE="MASTER", p_INTERFACE_TYPE="NETWORKING",
+                p_NUM_CE=1, p_IOBDELAY="IFD",
+
+                i_DDLY=delayed,
+                i_CE1=1, i_CE2=1,
+                i_RST=self.reset,
+                i_CLK=ClockSignal("pix5x"), i_CLKB=~ClockSignal("pix5x"), i_CLKDIV=ClockSignal("pix"),
+                i_BITSLIP=self.bitslip,
+
+                o_Q1=self.data[9], o_Q2=self.data[8],
+                o_Q3=self.data[7], o_Q4=self.data[6],
+                o_Q5=self.data[5], o_Q6=self.data[4],
+                o_Q7=self.data[3], o_Q8=self.data[2],
+
+                o_SHIFTOUT1=shift1, o_SHIFTOUT2=shift2,
+            ),
+            Instance("ISERDESE2",
+                p_DATA_WIDTH=10, p_DATA_RATE="DDR",
+                p_SERDES_MODE="SLAVE", p_INTERFACE_TYPE="NETWORKING",
+                p_NUM_CE=1, p_IOBDELAY="IFD",
+
+                i_DDLY=0,
+                i_CE1=1, i_CE2=1,
+                i_RST=self.reset,
+                i_CLK=ClockSignal("pix5x"), i_CLKB=~ClockSignal("pix5x"), i_CLKDIV=ClockSignal("pix"),
+                i_BITSLIP=self.bitslip,
+
+                o_SHIFTIN1=shift1, o_SHIFTIN2=shift2,
+
+                #o_Q1=, o_Q2=,
+                o_Q3=self.data[1], o_Q4=self.data[0],
+                #o_Q5=, o_Q6=,
+                #o_Q7=, o_Q8=
+            ),
         ]
 
 
@@ -259,19 +327,15 @@ class HDMIInputChannel(Module):
         alignment_detector = AlignmentDetector(invalid_symbol_detector.invalid)
         self.submodules += alignment_detector
 
-        self.specials += [
-            Instance("deserialiser_1_to_10",
-                i_clk_mgmt=ClockSignal(),
-                i_delay_ce=alignment_detector.delay_ce,
-                i_delay_count=alignment_detector.delay_count,
-                i_clk=ClockSignal("pix"),
-                i_clk_x1=ClockSignal("pix"),
-                i_clk_x5=ClockSignal("pix5x"),
-                i_bitslip=alignment_detector.bitslip,
-                i_reset=self.reset,
-                i_serial=data,
-                o_data=symbol
-            ),
+        deserialiser = Deserialiser1to10()
+        self.submodules += deserialiser
+        self.comb += [
+            deserialiser.delay_ce.eq(alignment_detector.delay_ce),
+            deserialiser.delay_count.eq(alignment_detector.delay_count),
+            deserialiser.bitslip.eq(alignment_detector.bitslip),
+            deserialiser.reset.eq(self.reset),
+            deserialiser.serial.eq(data),
+            symbol.eq(deserialiser.data)
         ]
 
         decoder = Decoding()
@@ -460,8 +524,6 @@ class HDMILoopback(Module):
                 blue.eq(data[0])
             )
         ]
-
-        platform.add_source_dir("./input_src/")
 
         # hdmi output
         self.specials += [
