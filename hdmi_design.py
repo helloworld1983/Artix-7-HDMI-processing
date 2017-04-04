@@ -191,6 +191,50 @@ class InvalidSymbolDetector(Module):
             self.comb += If(symbol == s, self.invalid.eq(0))
 
 
+class AlignmentDetector(Module):
+    def __init__(self, invalid_symbol):
+        self.delay_count = Signal(5)
+        self.delay_ce = Signal()
+        self.bitslip = Signal()
+
+        # # #
+
+        count = Signal(20)
+        signal_quality = Signal(28)
+        holdoff = Signal(10)
+        error_seen = Signal()
+
+        self.sync.pix += [
+            error_seen.eq(0),
+            If(holdoff == 0,
+                If(invalid_symbol,
+                    error_seen.eq(1)
+                )
+            ).Else(
+                holdoff.eq(holdoff-1)
+            ),
+            self.bitslip.eq(0),
+            self.delay_ce.eq(0),
+            If(error_seen,
+                If(signal_quality[24:28] == 0xf,
+                    holdoff.eq(2**10-1),
+                    If(self.delay_count == 31,
+                        self.bitslip.eq(1)
+                    ),
+                    self.delay_count.eq(self.delay_count+1),
+                	self.delay_ce.eq(1),
+                	signal_quality[24:28].eq(0x4)
+                ).Else(
+                	signal_quality.eq(signal_quality + 0x100000)
+                )
+            ).Else(
+                If(signal_quality[24:28] != 0,
+                    signal_quality.eq(signal_quality-1)
+                )
+            )
+        ]
+
+
 class HDMIInputChannel(Module):
     def __init__(self, data):
         self.reset = Signal()
@@ -212,26 +256,22 @@ class HDMIInputChannel(Module):
         invalid_symbol_detector = InvalidSymbolDetector(symbol)
         self.submodules += invalid_symbol_detector
 
+        alignment_detector = AlignmentDetector(invalid_symbol_detector.invalid)
+        self.submodules += alignment_detector
+
         self.specials += [
             Instance("deserialiser_1_to_10",
                 i_clk_mgmt=ClockSignal(),
-                i_delay_ce=delay_ce,
-                i_delay_count=delay_count,
+                i_delay_ce=alignment_detector.delay_ce,
+                i_delay_count=alignment_detector.delay_count,
                 i_clk=ClockSignal("pix"),
                 i_clk_x1=ClockSignal("pix"),
                 i_clk_x5=ClockSignal("pix5x"),
-                i_bitslip=bitslip,
+                i_bitslip=alignment_detector.bitslip,
                 i_reset=self.reset,
                 i_serial=data,
                 o_data=symbol
             ),
-            Instance("alignment_detect",
-                i_clk=ClockSignal("pix"),
-                i_invalid_symbol=invalid_symbol_detector.invalid,
-                o_delay_count=delay_count,
-                o_delay_ce=delay_ce,
-                o_bitslip=bitslip
-            )
         ]
 
         decoder = Decoding()
