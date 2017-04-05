@@ -14,6 +14,8 @@ from litex.soc.integration.builder import *
 from litevideo.input.edid import EDID
 from litevideo.input.decoding import Decoding
 
+from litevideo.output.hdmi.s7 import S7HDMIOutPHY, S7HDMIOutEncoderSerializer
+
 
 class _CRG(Module):
     def __init__(self, platform):
@@ -385,29 +387,6 @@ class HDMILoopback(Module):
                 o_O=hdmi_in_data[2]),
         ]
 
-        # output buffers
-        hdmi_out_clk = Signal()
-        hdmi_out_data = Signal(3)
-
-        self.specials += [
-            Instance("OBUFDS",
-                i_I=hdmi_out_clk,
-                o_O=hdmi_out_pads.clk_p,
-                o_OB=hdmi_out_pads.clk_n),
-            Instance("OBUFDS",
-                i_I=hdmi_out_data[0],
-                o_O=hdmi_out_pads.data0_p,
-                o_OB=hdmi_out_pads.data0_n),
-            Instance("OBUFDS",
-                i_I=hdmi_out_data[1],
-                o_O=hdmi_out_pads.data1_p,
-                o_OB=hdmi_out_pads.data1_n),
-            Instance("OBUFDS",
-                i_I=hdmi_out_data[2],
-                o_O=hdmi_out_pads.data2_p,
-                o_OB=hdmi_out_pads.data2_n),
-        ]
-
         # edid
         edid_rom = [
             0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00,
@@ -474,8 +453,9 @@ class HDMILoopback(Module):
             Instance("BUFIO", i_I=pix5x_clk_pll, o_O=pix5x_clk),
         ]
 
-        self.clock_domains.cd_pix = ClockDomain("pix", reset_less=True)
+        self.clock_domains.cd_pix = ClockDomain("pix")
         self.clock_domains.cd_pix5x = ClockDomain("pix5x", reset_less=True)
+        self.comb += self.cd_pix.rst.eq(ResetSignal()) # FIXME
         self.comb += self.cd_pix.clk.eq(pix_clk)
         self.comb += self.cd_pix5x.clk.eq(pix5x_clk)
 
@@ -526,28 +506,20 @@ class HDMILoopback(Module):
         ]
 
         # hdmi output
-        self.specials += [
-            Instance("hdmi_output",
-                i_pixel_clk=ClockSignal("pix"),
-                i_pixel_io_clk_x1=ClockSignal("pix"),
-                i_pixel_io_clk_x5=ClockSignal("pix5x"),
+        self.submodules.hdmi_output_clkgen = S7HDMIOutEncoderSerializer(hdmi_out_pads.clk_p, hdmi_out_pads.clk_n, bypass_encoder=True)
+        self.submodules.hdmi_output = S7HDMIOutPHY(hdmi_out_pads)
 
-                i_data_valid=1,
-                i_vga_blank=blank,
-                i_vga_hsync=hsync,
-                i_vga_vsync=vsync,
-                i_vga_red=red,
-                i_vga_blue=blue,
-                i_vga_green=green,
-
-                o_tmds_out_clk=hdmi_out_clk,
-                o_tmds_out_ch0=hdmi_out_data[0],
-                o_tmds_out_ch1=hdmi_out_data[1],
-                o_tmds_out_ch2=hdmi_out_data[2]
-            )
+        self.comb += [
+            self.hdmi_output_clkgen.data.eq(Signal(10, reset=0b0000011111)),
+            self.hdmi_output.sink.valid.eq(1),
+            self.hdmi_output.sink.de.eq(~blank),
+            self.hdmi_output.sink.hsync.eq(hsync),
+            self.hdmi_output.sink.vsync.eq(vsync),
+            self.hdmi_output.sink.r.eq(red),
+            self.hdmi_output.sink.g.eq(green),
+            self.hdmi_output.sink.b.eq(blue)
         ]
         self.comb += hdmi_out_pads.scl.eq(1)
-        platform.add_source_dir("./output_src/")
 
 def main():
     platform = nexys_video.Platform()
